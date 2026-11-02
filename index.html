@@ -855,14 +855,15 @@ brewText();renderTags();
 /* ===== together, through Supabase Realtime: presence for who is here, broadcast for footsteps ===== */
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
-const APP_V='7';
+const APP_V='8';
 function connectRoom(){
   // Presence only says who is here (tracked once per connection). Everything else rides broadcasts:
   // 'st' = my whole state (on change, at most once a second, plus a 4 s heartbeat), 'pos' = footsteps (≤4 a second).
   return new Promise(res=>{
     if(!window.supabase){res(null);return}
     let sb;try{sb=window.supabase.createClient(SB_URL,SB_KEY,{realtime:{params:{eventsPerSecond:10}}})}catch(e){res(null);return}
-    const ch=sb.channel(ROOM_NAME+'-v'+APP_V,{config:{presence:{key:myKey},broadcast:{self:false}}});
+    const ch=sb.channel(ROOM_NAME+'-live',   // one room for every version from now on
+      {config:{presence:{key:myKey},broadcast:{self:false}}});
     let posTimer=null,cb=null,ready=false,latest=null,lastSt='',lastStAt=0,stTimer=null,lastPosAt=0,lastPosStr='',tracked=false;
     const peers={}; // key -> {st,pos,seen}
     const num=(v,d=0)=>{v=+v;return Number.isFinite(v)?v:d};
@@ -917,7 +918,9 @@ function connectRoom(){
 }
 // a phone or computer still holding an older copy of the page would end up in a different room, so check for a newer copy now and then
 setInterval(async()=>{try{const r=await fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'});const t=await r.text();const m=t.match(/const APP_V='(\d+)'/);
-  if(m&&m[1]!==APP_V){if(me.mode!=='sit')location.reload();else{$('solo').textContent='차실이 새로 단장됐어요. 일어나면 새로고침돼요.';$('solo').hidden=false;$('stand').addEventListener('click',()=>location.reload(),{once:true})}}}catch(e){}},60000);
+  if(m&&m[1]!==APP_V){   // a newer copy: reload, and come back to the same cushion with the same tea and sprout
+    try{sessionStorage.setItem('bm.resume',JSON.stringify({seat:me.mode==='sit'?me.seat:null,x:me.x,z:me.z,ry:me.ry,sips:me.sips,at:Date.now()}))}catch(e){}
+    location.reload()}}catch(e){}},60000);
 document.addEventListener('visibilitychange',()=>{if(!room)return;presence();room.flush&&room.flush()});
 addEventListener('pagehide',()=>{if(room&&room.bye)room.bye()});addEventListener('beforeunload',()=>{if(room&&room.bye)room.bye()});   // leaving for good: take the cushion with you
 async function enter(){
@@ -926,6 +929,10 @@ async function enter(){
   if(!r){$('solo').hidden=false;return}
   room=r;myPeer=myKey;
   room.onPeers(ch=>{syncPeers(ch.peers);renderTags()});
+  let rs=null;try{rs=JSON.parse(sessionStorage.getItem('bm.resume')||'null');sessionStorage.removeItem('bm.resume')}catch(e){}
+  if(rs&&Date.now()-rs.at<120000){me.sips=+rs.sips||0;setSprout(me.char,me.sips);
+    if(Number.isInteger(rs.seat))setTimeout(()=>{if(!seatOwner(rs.seat))sitAt(rs.seat)},1500);
+    else if(typeof rs.x==='number'){me.x=rs.x;me.z=rs.z;me.ry=+rs.ry||0}}
   presence();
 }
 // ask for a name once, then remember it on this device
