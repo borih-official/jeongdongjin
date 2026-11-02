@@ -631,7 +631,7 @@ $('pourBtn').onclick=()=>{if(me.mode==='sit'&&me.sk>0&&!me.act)startAct('sk2bd')
 $('tea').onchange=e=>{me.tea=e.target.value;store.set('tea2',me.tea);if(me.mode==='sit')startBrew();else presence()};
 
 /* ===== presence ===== */
-function presence(){if(!room)return;room.presence({name:me.name,color:me.color,bowl:me.bowl,x:+me.x.toFixed(2),z:+me.z.toFixed(2),ry:+me.ry.toFixed(2),mode:me.mode,seat:me.seat,
+function presence(){if(!room)return;room.presence({away:document.hidden?1:0,name:me.name,color:me.color,bowl:me.bowl,x:+me.x.toFixed(2),z:+me.z.toFixed(2),ry:+me.ry.toFixed(2),mode:me.mode,seat:me.seat,
   tea:me.tea,greet:me.greet.slice(0,60),greetAt:me.greetAt,brew:me.brew,steep:me.steep,sips:me.sips,sk:me.sk,drink:me.drink,act:me.act,actAt:me.actAt,emote:me.emote,emoteAt:me.emoteAt}).catch(()=>{})}
 let pT=null,lastPos=0;const presenceSoon=()=>{clearTimeout(pT);pT=setTimeout(presence,500)};
 
@@ -855,7 +855,7 @@ brewText();renderTags();
 /* ===== together, through Supabase Realtime: presence for who is here, broadcast for footsteps ===== */
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
-const APP_V='5';
+const APP_V='7';
 function connectRoom(){
   // Presence only says who is here (tracked once per connection). Everything else rides broadcasts:
   // 'st' = my whole state (on change, at most once a second, plus a 4 s heartbeat), 'pos' = footsteps (≤4 a second).
@@ -868,7 +868,9 @@ function connectRoom(){
     const num=(v,d=0)=>{v=+v;return Number.isFinite(v)?v:d};
     const here=()=>{const st=ch.presenceState();return new Set(Object.keys(st))};
     const peersNow=()=>{const h=here(),now=Date.now(),out=[];
-      for(const k in peers){const p=peers[k];if(now-p.seen>(h.has(k)?13000:9000)){delete peers[k];continue}
+      for(const k in peers){const p=peers[k],away=p.st&&p.st.away;
+        // someone who switched to another window keeps their cushion for up to 30 minutes, shown as stepped away
+        const keep=away?30*60e3:h.has(k)?60e3:15000;if(now-p.seen>keep||(p.leftAt&&now-p.leftAt>180e3)){delete peers[k];continue}
         if(!p.st)continue;const pr=Object.assign({},p.st);if(p.pos&&p.pos.t>=(p.stT||0))Object.assign(pr,p.pos);
         out.push({peer:k,by:null,kind:'viewer',sameTab:false,presence:pr})}
       out.push({peer:myKey,by:null,kind:'viewer',sameTab:true,presence:latest||{}});
@@ -877,10 +879,12 @@ function connectRoom(){
     const peer=k=>peers[k]||(peers[k]={seen:Date.now()});
     ch.on('presence',{event:'sync'},()=>emit(true));
     ch.on('presence',{event:'join'},({key})=>{if(key!==myKey)setTimeout(()=>sendSt(true),300+Math.random()*700)});
-    ch.on('presence',{event:'leave'},({key})=>{delete peers[key];emit(false)});
+    ch.on('presence',{event:'leave'},({key})=>{const q=peers[key];if(q&&q.st&&q.st.away)q.leftAt=Date.now();else delete peers[key];emit(false)});
+    ch.on('presence',{event:'join'},({key})=>{const q=peers[key];if(q)q.leftAt=0});
     ch.on('broadcast',{event:'st'},({payload:p})=>{if(!p||typeof p.k!=='string'||p.k===myKey||typeof p.d!=='string'||p.d.length>2000)return;
       let o;try{o=JSON.parse(p.d)}catch(e){return}if(!o||typeof o!=='object')return;
       o.name=typeof p.n==='string'?p.n.slice(0,12):'';const q=peer(p.k);q.st=o;q.stT=num(o.t);q.seen=Date.now();emit(false)});
+    ch.on('broadcast',{event:'bye'},({payload:p})=>{if(p&&typeof p.k==='string'&&p.k!==myKey){delete peers[p.k];emit(false)}});
     ch.on('broadcast',{event:'pos'},({payload:p})=>{if(!p||typeof p.k!=='string'||p.k===myKey)return;
       const q=peer(p.k);q.pos={x:clamp(num(p.x),-30,30),z:clamp(num(p.z,15),-6,30),ry:num(p.ry),t:num(p.t)};q.seen=Date.now();emit(false)});
     function sendSt(force){stTimer=null;if(!ready||!latest)return;
@@ -898,7 +902,9 @@ function connectRoom(){
           ch.send({type:'broadcast',event:'pos',payload:{k:myKey,x:q.x,z:q.z,ry:q.ry,t:Date.now()}}).catch(()=>{})};
         if(ready&&ps!==lastPosStr){if(t-lastPosAt>=gap)sendPos();else if(!posTimer)posTimer=setTimeout(sendPos,gap-(t-lastPosAt))}
         scheduleSt();return Promise.resolve()},
-      onPeers(fn){cb=fn;emit(true);return()=>{cb=null}}
+      onPeers(fn){cb=fn;emit(true);return()=>{cb=null}},
+      flush(){if(stTimer){clearTimeout(stTimer);stTimer=null}sendSt(true)},
+      bye(){if(ready)ch.send({type:'broadcast',event:'bye',payload:{k:myKey}}).catch(()=>{})}
     };
     setInterval(()=>{if(ready)sendSt(true);emit(false)},4000);
     let settled=false;const to=setTimeout(()=>{if(!settled){settled=true;res(null)}},10000);
@@ -912,6 +918,8 @@ function connectRoom(){
 // a phone or computer still holding an older copy of the page would end up in a different room, so check for a newer copy now and then
 setInterval(async()=>{try{const r=await fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'});const t=await r.text();const m=t.match(/const APP_V='(\d+)'/);
   if(m&&m[1]!==APP_V){if(me.mode!=='sit')location.reload();else{$('solo').textContent='차실이 새로 단장됐어요. 일어나면 새로고침돼요.';$('solo').hidden=false;$('stand').addEventListener('click',()=>location.reload(),{once:true})}}}catch(e){}},60000);
+document.addEventListener('visibilitychange',()=>{if(!room)return;presence();room.flush&&room.flush()});
+addEventListener('pagehide',()=>{if(room&&room.bye)room.bye()});addEventListener('beforeunload',()=>{if(room&&room.bye)room.bye()});   // leaving for good: take the cushion with you
 async function enter(){
   renderTags();
   const r=await connectRoom();
