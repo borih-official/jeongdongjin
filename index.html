@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
 <meta name="description" content="정동진 절벽 위 보리 차실. 함께 앉아 차를 우리고, 진짜 정동진의 일출을 기다려요.">
 <meta property="og:title" content="보리 모닝 차실">
-<meta property="og:description" content="정동진에서 일출 보며 차 마실 사람 모여요.">
+<meta property="og:description" content="정동진에서 일출 보며 차 마실 사람 모여라.">
 <title>보리 모닝 차실</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500&family=Poppins:wght@300;400;500&family=Inter:wght@400;500&display=swap">
@@ -856,27 +856,45 @@ brewText();renderTags();
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
 function connectRoom(){
+  // Supabase closes a channel whose client re-tracks Presence too often, and caps Presence objects at 10 keys.
+  // So: Presence carries one compact state string, re-tracked at most every 2.5 s; footsteps go as light broadcasts.
   return new Promise(res=>{
     if(!window.supabase){res(null);return}
-    let sb;try{sb=window.supabase.createClient(SB_URL,SB_KEY,{realtime:{params:{eventsPerSecond:15}}})}catch(e){res(null);return}
+    let sb;try{sb=window.supabase.createClient(SB_URL,SB_KEY,{realtime:{params:{eventsPerSecond:10}}})}catch(e){res(null);return}
     const ch=sb.channel(ROOM_NAME,{config:{presence:{key:myKey},broadcast:{self:false}}});
-    let cb=null,lastState='',lastTrack=0;const pos={};
+    let cb=null,ready=false,latest=null,lastTracked='',lastTrackAt=0,trackTimer=null,lastPosAt=0,lastPosStr='';
+    const pos={};
     const num=(v,d=0)=>{v=+v;return Number.isFinite(v)?v:d};
-    const peersNow=()=>{const st=ch.presenceState(),out=[];for(const k in st){const m=st[k][st[k].length-1]||{};const p=pos[k];out.push({peer:k,by:null,kind:'viewer',sameTab:k===myKey,presence:p?Object.assign({},m,p):m})}return out};
+    const parse=m=>{try{const o=JSON.parse(m&&m.d||'{}');if(o&&typeof o==='object'){o.name=typeof m.n==='string'?m.n:'';return o}}catch(e){}return {}};
+    const peersNow=()=>{const st=ch.presenceState(),out=[];
+      for(const k in st){const m=st[k][st[k].length-1]||{},pr=parse(m),p=pos[k];
+        if(p&&(+pr.t||0)>p.t)delete pos[k];
+        out.push({peer:k,by:null,kind:'viewer',sameTab:k===myKey,presence:pos[k]?Object.assign(pr,pos[k]):pr})}
+      return out};
     const emit=j=>{if(cb)cb({peers:peersNow(),joined:j?[1]:[]})};
     ch.on('presence',{event:'sync'},()=>emit(true));
     ch.on('presence',{event:'leave'},({key})=>{delete pos[key]});
-    ch.on('broadcast',{event:'pos'},({payload:p})=>{if(!p||typeof p.k!=='string'||p.k===myKey)return;pos[p.k]={x:clamp(num(p.x),-30,30),z:clamp(num(p.z,15),-6,30),ry:num(p.ry)};emit(false)});
+    ch.on('broadcast',{event:'pos'},({payload:p})=>{if(!p||typeof p.k!=='string'||p.k===myKey)return;
+      pos[p.k]={x:clamp(num(p.x),-30,30),z:clamp(num(p.z,15),-6,30),ry:num(p.ry),t:num(p.t)};emit(false)});
+    function doTrack(){trackTimer=null;if(!ready||!latest)return;
+      const o=Object.assign({},latest,{t:Date.now()});delete o.name;
+      const d=JSON.stringify(o);if(d.replace(/"t":\d+/,'')===lastTracked&&performance.now()-lastTrackAt<20000)return;
+      lastTracked=d.replace(/"t":\d+/,'');lastTrackAt=performance.now();
+      ch.track({n:String(latest.name||'').slice(0,12),d}).catch(()=>{})}
+    function scheduleTrack(){if(trackTimer)return;const wait=Math.max(0,2500-(performance.now()-lastTrackAt));trackTimer=setTimeout(doTrack,wait)}
     const api={
-      presence(o){ // footsteps go out as light broadcasts; everything else (and a fresh position now and then) as presence
-        const st=JSON.stringify(Object.assign({},o,{x:0,z:0,ry:0})),t=performance.now();
-        if(st!==lastState||t-lastTrack>5000){lastState=st;lastTrack=t;return ch.track(o)}
-        return ch.send({type:'broadcast',event:'pos',payload:{k:myKey,x:o.x,z:o.z,ry:o.ry}});
-      },
+      presence(o){latest=o;
+        const t=performance.now(),ps=o.x+','+o.z+','+o.ry;
+        if(ready&&ps!==lastPosStr&&t-lastPosAt>200){lastPosAt=t;lastPosStr=ps;ch.send({type:'broadcast',event:'pos',payload:{k:myKey,x:o.x,z:o.z,ry:o.ry,t:Date.now()}}).catch(()=>{})}
+        scheduleTrack();return Promise.resolve()},
       onPeers(fn){cb=fn;emit(true);return()=>{cb=null}}
     };
-    const to=setTimeout(()=>res(null),10000);
-    ch.subscribe(s=>{if(s==='SUBSCRIBED'){clearTimeout(to);res(api)}else if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'){clearTimeout(to);res(null)}});
+    setInterval(()=>{if(ready&&latest&&performance.now()-lastTrackAt>15000)scheduleTrack()},5000);
+    let settled=false;const to=setTimeout(()=>{if(!settled){settled=true;res(null)}},10000);
+    ch.subscribe(st=>{
+      if(st==='SUBSCRIBED'){ready=true;lastTracked='';lastTrackAt=0;scheduleTrack();if(!settled){settled=true;clearTimeout(to);res(api)}}
+      else if(st==='CHANNEL_ERROR'||st==='TIMED_OUT'||st==='CLOSED'){ready=false;if(!settled){settled=true;clearTimeout(to);res(null)}}
+    });
   });
 }
 async function enter(){
