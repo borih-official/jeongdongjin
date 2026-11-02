@@ -711,11 +711,11 @@ function frame(now){
 
   moveMe(dt);
   me.char.g.position.set(me.x,inside(me.x,me.z)?0:GROUND,me.z);me.char.g.rotation.y=me.ry;
-  if(room&&now-lastPos>110&&now-movedAt<300){lastPos=now;presence()}
+  if(room&&now-lastPos>50&&now-movedAt<300){lastPos=now;presence()}
   updateRows(dt);
   updateSitButton();
   for(const o of others.values()){
-    const pr=o.pr,px=o.x,pz=o.z;o.x+=(pr.x-o.x)*.18;o.z+=(pr.z-o.z)*.18;o.ry=angLerp(o.ry,+pr.ry||0,.2);
+    const pr=o.pr,px=o.x,pz=o.z,f=1-Math.exp(-dt*10);o.x+=(pr.x-o.x)*f;o.z+=(pr.z-o.z)*f;o.ry=angLerp(o.ry,+pr.ry||0,f);
     o.char.speed=pr.mode==='sit'?0:Math.min(4,Math.hypot(o.x-px,o.z-pz)/Math.max(dt,.001));
     o.char.g.position.set(o.x,inside(o.x,o.z)?0:GROUND,o.z);o.char.g.rotation.y=o.ry;
   }
@@ -855,48 +855,63 @@ brewText();renderTags();
 /* ===== together, through Supabase Realtime: presence for who is here, broadcast for footsteps ===== */
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
+const APP_V='5';
 function connectRoom(){
-  // Supabase closes a channel whose client re-tracks Presence too often, and caps Presence objects at 10 keys.
-  // So: Presence carries one compact state string, re-tracked at most every 2.5 s; footsteps go as light broadcasts.
+  // Presence only says who is here (tracked once per connection). Everything else rides broadcasts:
+  // 'st' = my whole state (on change, at most once a second, plus a 4 s heartbeat), 'pos' = footsteps (≤4 a second).
   return new Promise(res=>{
     if(!window.supabase){res(null);return}
     let sb;try{sb=window.supabase.createClient(SB_URL,SB_KEY,{realtime:{params:{eventsPerSecond:10}}})}catch(e){res(null);return}
-    const ch=sb.channel(ROOM_NAME,{config:{presence:{key:myKey},broadcast:{self:false}}});
-    let cb=null,ready=false,latest=null,lastTracked='',lastTrackAt=0,trackTimer=null,lastPosAt=0,lastPosStr='';
-    const pos={};
+    const ch=sb.channel(ROOM_NAME+'-v'+APP_V,{config:{presence:{key:myKey},broadcast:{self:false}}});
+    let posTimer=null,cb=null,ready=false,latest=null,lastSt='',lastStAt=0,stTimer=null,lastPosAt=0,lastPosStr='',tracked=false;
+    const peers={}; // key -> {st,pos,seen}
     const num=(v,d=0)=>{v=+v;return Number.isFinite(v)?v:d};
-    const parse=m=>{try{const o=JSON.parse(m&&m.d||'{}');if(o&&typeof o==='object'){o.name=typeof m.n==='string'?m.n:'';return o}}catch(e){}return {}};
-    const peersNow=()=>{const st=ch.presenceState(),out=[];
-      for(const k in st){const m=st[k][st[k].length-1]||{},pr=parse(m),p=pos[k];
-        if(p&&(+pr.t||0)>p.t)delete pos[k];
-        out.push({peer:k,by:null,kind:'viewer',sameTab:k===myKey,presence:pos[k]?Object.assign(pr,pos[k]):pr})}
+    const here=()=>{const st=ch.presenceState();return new Set(Object.keys(st))};
+    const peersNow=()=>{const h=here(),now=Date.now(),out=[];
+      for(const k in peers){const p=peers[k];if(now-p.seen>(h.has(k)?13000:9000)){delete peers[k];continue}
+        if(!p.st)continue;const pr=Object.assign({},p.st);if(p.pos&&p.pos.t>=(p.stT||0))Object.assign(pr,p.pos);
+        out.push({peer:k,by:null,kind:'viewer',sameTab:false,presence:pr})}
+      out.push({peer:myKey,by:null,kind:'viewer',sameTab:true,presence:latest||{}});
       return out};
     const emit=j=>{if(cb)cb({peers:peersNow(),joined:j?[1]:[]})};
+    const peer=k=>peers[k]||(peers[k]={seen:Date.now()});
     ch.on('presence',{event:'sync'},()=>emit(true));
-    ch.on('presence',{event:'leave'},({key})=>{delete pos[key]});
+    ch.on('presence',{event:'join'},({key})=>{if(key!==myKey)setTimeout(()=>sendSt(true),300+Math.random()*700)});
+    ch.on('presence',{event:'leave'},({key})=>{delete peers[key];emit(false)});
+    ch.on('broadcast',{event:'st'},({payload:p})=>{if(!p||typeof p.k!=='string'||p.k===myKey||typeof p.d!=='string'||p.d.length>2000)return;
+      let o;try{o=JSON.parse(p.d)}catch(e){return}if(!o||typeof o!=='object')return;
+      o.name=typeof p.n==='string'?p.n.slice(0,12):'';const q=peer(p.k);q.st=o;q.stT=num(o.t);q.seen=Date.now();emit(false)});
     ch.on('broadcast',{event:'pos'},({payload:p})=>{if(!p||typeof p.k!=='string'||p.k===myKey)return;
-      pos[p.k]={x:clamp(num(p.x),-30,30),z:clamp(num(p.z,15),-6,30),ry:num(p.ry),t:num(p.t)};emit(false)});
-    function doTrack(){trackTimer=null;if(!ready||!latest)return;
-      const o=Object.assign({},latest,{t:Date.now()});delete o.name;
-      const d=JSON.stringify(o);if(d.replace(/"t":\d+/,'')===lastTracked&&performance.now()-lastTrackAt<20000)return;
-      lastTracked=d.replace(/"t":\d+/,'');lastTrackAt=performance.now();
-      ch.track({n:String(latest.name||'').slice(0,12),d}).catch(()=>{})}
-    function scheduleTrack(){if(trackTimer)return;const wait=Math.max(0,2500-(performance.now()-lastTrackAt));trackTimer=setTimeout(doTrack,wait)}
+      const q=peer(p.k);q.pos={x:clamp(num(p.x),-30,30),z:clamp(num(p.z,15),-6,30),ry:num(p.ry),t:num(p.t)};q.seen=Date.now();emit(false)});
+    function sendSt(force){stTimer=null;if(!ready||!latest)return;
+      const o=Object.assign({},latest,{t:Date.now()});delete o.name;const d=JSON.stringify(o),core=d.replace(/"t":\d+/,'');
+      if(!force&&core===lastSt&&performance.now()-lastStAt<4000)return;
+      lastSt=core;lastStAt=performance.now();
+      ch.send({type:'broadcast',event:'st',payload:{k:myKey,n:String(latest.name||'').slice(0,12),d}}).catch(()=>{})}
+    function scheduleSt(){if(stTimer)return;stTimer=setTimeout(()=>sendSt(false),Math.max(0,400-(performance.now()-lastStAt)))}
     const api={
       presence(o){latest=o;
         const t=performance.now(),ps=o.x+','+o.z+','+o.ry;
-        if(ready&&ps!==lastPosStr&&t-lastPosAt>200){lastPosAt=t;lastPosStr=ps;ch.send({type:'broadcast',event:'pos',payload:{k:myKey,x:o.x,z:o.z,ry:o.ry,t:Date.now()}}).catch(()=>{})}
-        scheduleTrack();return Promise.resolve()},
+        // footsteps: 10 a second while the room is small, 5 a second when it is busy, and always the final step
+        const gap=Object.keys(peers).length<8?100:200;
+        const sendPos=()=>{posTimer=null;const q=latest;const qs=q.x+','+q.z+','+q.ry;if(!ready||qs===lastPosStr)return;lastPosAt=performance.now();lastPosStr=qs;
+          ch.send({type:'broadcast',event:'pos',payload:{k:myKey,x:q.x,z:q.z,ry:q.ry,t:Date.now()}}).catch(()=>{})};
+        if(ready&&ps!==lastPosStr){if(t-lastPosAt>=gap)sendPos();else if(!posTimer)posTimer=setTimeout(sendPos,gap-(t-lastPosAt))}
+        scheduleSt();return Promise.resolve()},
       onPeers(fn){cb=fn;emit(true);return()=>{cb=null}}
     };
-    setInterval(()=>{if(ready&&latest&&performance.now()-lastTrackAt>15000)scheduleTrack()},5000);
+    setInterval(()=>{if(ready)sendSt(true);emit(false)},4000);
     let settled=false;const to=setTimeout(()=>{if(!settled){settled=true;res(null)}},10000);
     ch.subscribe(st=>{
-      if(st==='SUBSCRIBED'){ready=true;lastTracked='';lastTrackAt=0;scheduleTrack();if(!settled){settled=true;clearTimeout(to);res(api)}}
-      else if(st==='CHANNEL_ERROR'||st==='TIMED_OUT'||st==='CLOSED'){ready=false;if(!settled){settled=true;clearTimeout(to);res(null)}}
+      if(st==='SUBSCRIBED'){ready=true;if(!tracked){tracked=true;ch.track({v:APP_V}).catch(()=>{})}
+        setTimeout(()=>sendSt(true),200);if(!settled){settled=true;clearTimeout(to);res(api)}}
+      else if(st==='CHANNEL_ERROR'||st==='TIMED_OUT'||st==='CLOSED'){ready=false;tracked=false;if(!settled){settled=true;clearTimeout(to);res(null)}}
     });
   });
 }
+// a phone or computer still holding an older copy of the page would end up in a different room, so check for a newer copy now and then
+setInterval(async()=>{try{const r=await fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'});const t=await r.text();const m=t.match(/const APP_V='(\d+)'/);
+  if(m&&m[1]!==APP_V){if(me.mode!=='sit')location.reload();else{$('solo').textContent='차실이 새로 단장됐어요. 일어나면 새로고침돼요.';$('solo').hidden=false;$('stand').addEventListener('click',()=>location.reload(),{once:true})}}}catch(e){}},60000);
 async function enter(){
   renderTags();
   const r=await connectRoom();
