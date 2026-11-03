@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="description" content="정동진 절벽 위 보리 차실. 함께 앉아 차를 우리고, 진짜 정동진의 일출을 기다려요.">
 <meta property="og:title" content="보리 모닝 차실">
 <meta property="og:description" content="정동진에서 일출 보며 차 마실 사람 모여라.">
@@ -96,6 +96,7 @@ body{background:#0d1520;color:var(--ink);font-family:var(--f-ko);font-weight:300
 .kst{font-family:var(--f-brand);font-size:11px;letter-spacing:.2em;margin-left:6px;color:var(--ink-mid);vertical-align:top}
 .gate{position:fixed;inset:0;z-index:60;display:flex;justify-content:center;align-items:flex-start;overflow-y:auto;padding-top:max(14vh,calc(env(safe-area-inset-top,0px) + 24px));padding-bottom:24px;background:rgba(10,14,20,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding-inline:max(16px,env(safe-area-inset-left,0px))}
 .gate-card{width:100%;max-width:360px;min-width:0;margin:0 auto;display:grid;gap:14px;background:var(--glass-hi);border:1px solid var(--line);border-radius:18px;padding:24px;text-align:center}
+.gate-card .fine{font-size:11.5px;line-height:1.7;color:rgba(243,239,230,.55)}
 .gate-card p{margin:0;word-break:keep-all;font-size:14px;line-height:1.8;color:var(--ink-mid)}
 .gate-card input{display:block;width:100%;min-width:0;max-width:100%;font:inherit;font-size:16px;color:var(--ink);background:rgba(243,239,230,.08);border:1px solid var(--line);border-radius:12px;padding:11px 14px;text-align:center;-webkit-user-select:text;user-select:text}
 .ver{font-family:var(--f-ui);font-size:9px;letter-spacing:.08em;font-weight:400;color:rgba(243,239,230,.38);margin-left:8px;vertical-align:2px}
@@ -103,6 +104,8 @@ body{background:#0d1520;color:var(--ink);font-family:var(--f-ko);font-weight:300
 .sr{max-width:min(62vw,340px)}
 .homebtn{pointer-events:auto;background:var(--glass);font-size:12px;padding:6px 12px;text-shadow:none}
 body.cha .homebtn{opacity:0;pointer-events:none}
+#brewMsg.ding{animation:ding 1.6s ease-out}
+@keyframes ding{0%{color:var(--paper);text-shadow:0 0 12px rgba(196,176,122,.9)}100%{color:inherit;text-shadow:none}}
 .solo{font-family:var(--f-ui);font-size:11px;color:var(--ink-mid);text-align:center}
 
 .labels{position:fixed;inset:0;pointer-events:none;overflow:hidden}
@@ -134,6 +137,7 @@ body.cha .greets,body.cha .say,body.cha .mine,body.cha .labels,body.cha .side,bo
   <form class="gate-card" id="gateForm">
     <div class="logo">BORIH MORNING</div>
     <p>정동진 보리 차실에 오신 걸 환영해요.<br>차실에서 불릴 이름을 알려주세요.</p>
+    <p class="fine">이름과 걷는 모습, 남긴 메시지는 지금 차실에 있는 모든 분에게 보여요.<br>창을 닫으면 차실에서 나가요.</p>
     <input id="nick" maxlength="12" autocomplete="nickname" placeholder="예: 보리" aria-label="이름">
     <button class="btn main" type="submit">차실로 들어가기</button>
   </form>
@@ -175,22 +179,31 @@ body.cha .greets,body.cha .say,body.cha .mine,body.cha .labels,body.cha .side,bo
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>window.THREE||document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"><\/script>')</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>window.supabase||document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"><\/script>')</script>
 <script>
 (()=>{
 const $=id=>document.getElementById(id);
+const notice=t=>{document.body.insertAdjacentHTML('beforeend','<div class="nogl">'+t+'</div>')};
+if(!window.THREE){notice('3D 차실을 불러오지 못했어요.<br>잠시 뒤 새로고침해 주세요.');return}
 // one page for phone, tablet and computer: touch drag or mouse drag or arrow keys to walk; lighter rendering on small touch devices
 const TOUCH=matchMedia('(pointer:coarse)').matches||'ontouchstart' in window;
 const LOW=TOUCH&&Math.min(screen.width,screen.height)<600;
 document.documentElement.dataset.input=TOUCH?'touch':'mouse';
 (()=>{let ok=false;try{const c=document.createElement('canvas');ok=!!(window.WebGLRenderingContext&&(c.getContext('webgl')||c.getContext('experimental-webgl')))}catch(e){}
   if(!ok){document.body.insertAdjacentHTML('beforeend','<div class="nogl">이 기기나 브라우저에서는 3D 차실을 열 수 없어요.<br>최신 Chrome, Safari, Edge에서 다시 열어주세요.</div>');throw new Error('no webgl')}})();
-document.addEventListener('gesturestart',e=>e.preventDefault());document.addEventListener('dblclick',e=>{if(e.target.id==='gl')e.preventDefault()});
+document.addEventListener('dblclick',e=>{if(e.target.id==='gl')e.preventDefault()});
 const LAT=37.6907,LON=129.0336,R=Math.PI/180,H9=9*3600e3;
 // liquor colours: 발효차 amber, 녹차 pale yellow-green, 백차 pale gold, 우롱 golden, 보이숙차 deep reddish-brown, 홍차 warm reddish-brown
-const TEAS=[{k:'green',n:'녹차',t:60,c:'#a7b04e'},{k:'white',n:'백차',t:90,c:'#d8c27c'},{k:'oolong',n:'우롱',t:45,c:'#c68a2c'},{k:'puer',n:'보이숙차',t:20,c:'#4e2214'},{k:'black',n:'홍차',t:120,c:'#8f5428'}];
+const TEAS=[{k:'green',n:'녹차',c:'#a7b04e'},{k:'white',n:'백차',c:'#d8c27c'},{k:'oolong',n:'우롱',c:'#c68a2c'},{k:'puer',n:'보이숙차',c:'#4e2214'},{k:'black',n:'홍차',c:'#8f5428'}];
 const ROBES=['#8fa68a','#c4b07a','#8c7b6b','#7a9e9a','#bccdb7','#a89860','#9e9b8c','#d4cfc6','#6b8a68','#b39b7d','#86a3a0','#e8dfc8'];
-const SAVOR=150,SPEED=1.35;
+/* ===== settings ===== */
+const PLACE='정동진';                                   // this tea room
+const OPEN_END=Date.UTC(2026,10,16,15,0);               // 2026-11-17 00:00 KST: the room closes and points to the next sunrise spot
+const NEXT_PLACE='';                                    // e.g. '호미곶' once decided
+const NEXT_URL='';                                      // e.g. 'https://borih-official.github.io/homigot/'
+const SPEED=1.35;
 const WALL_Z=4.9,DOOR_HALF=.85,ROOM_X=7.6,YARD_Z=22,YARD_X=9,GROUND=-.18;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -227,6 +240,8 @@ function pal(alt){let i=0;while(i<KEYS.length-2&&alt>KEYS[i+1][0])i++;const a=KE
 const v3=(c,o)=>(o||new THREE.Vector3()).set(c[0]/255,c[1]/255,c[2]/255);
 
 /* ===== renderer ===== */
+$('gl').addEventListener('webglcontextlost',e=>{e.preventDefault();notice('화면을 잠시 놓쳤어요.<br>다시 불러올게요.');
+  try{sessionStorage.setItem('bm.resume',JSON.stringify({seat:me.mode==='sit'?me.seat:null,x:me.x,z:me.z,ry:me.ry,sips:me.sips,at:Date.now()}))}catch(e){}setTimeout(()=>location.reload(),1200)},false);
 const renderer=new THREE.WebGLRenderer({canvas:$('gl'),antialias:!LOW,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(LOW?1.5:2,devicePixelRatio||1));
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -547,7 +562,7 @@ function makeChar(color){
 const LEAF_GEO=(()=>{const sh=new THREE.Shape();sh.moveTo(-.075,0);sh.quadraticCurveTo(-.035,.034,.075,.002);sh.quadraticCurveTo(-.035,-.012,-.075,0);
   const g=new THREE.ShapeGeometry(sh,10);const pos=g.attributes.position;for(let k=0;k<pos.count;k++){const x=pos.getX(k),u=(x+.075)/.15;pos.setY(k,pos.getY(k)-u*u*.035);pos.setZ(k,Math.sin(u*Math.PI)*.006)}g.computeVertexNormals();return g})();
 const GRAIN_MAX=16,GRAIN_START=6,GRAIN_GEO=new THREE.SphereGeometry(.018,8,6),AWN_GEO=new THREE.CylinderGeometry(.002,.002,.06,4);
-const EAR_AT=10,EAR_CYCLE=GRAIN_MAX-GRAIN_START+1;   // ear at the 10th sip; one grain a sip; when it is full the grains drop and a new ear starts
+const EAR_AT=10,EAR_CYCLE=GRAIN_MAX-GRAIN_START+1;   // the ear appears at the 10th sip with 6 grains, gains one a sip up to 16, then sheds them and starts again at 6
 const dropped=[],GRAIN_FLOOR_M=new THREE.MeshStandardMaterial({color:C('#e2c46a'),emissive:C('#6b5320'),emissiveIntensity:.35,roughness:.55});   // grains lying on the floor: {m,v,y0,t}
 function earState(n){if(n<EAR_AT)return {cycle:-1,g:0};const k=n-EAR_AT;return {cycle:Math.floor(k/EAR_CYCLE),g:GRAIN_START+k%EAR_CYCLE}}
 function dropGrains(c){const v=new THREE.Vector3();
@@ -568,7 +583,7 @@ function setSprout(c,n){
   n=Math.max(0,Math.floor(+n||0));if(c.sprout.n===n)return;
   const prev=c.sprout.n<0?null:earState(c.sprout.n),cur=earState(n);c.sprout.n=n;
   if(prev&&cur.cycle>prev.cycle&&prev.g>0)dropGrains(c);   // the ear grew too heavy: 투둑
-  const t=Math.min(n,10)/10,sp=sp0(c),g=cur.g,heavy=g>0?(g-GRAIN_START)/(GRAIN_MAX-GRAIN_START):0;
+  const t=Math.min(n,10)/10,sp=c.sprout,g=cur.g,heavy=g>0?(g-GRAIN_START)/(GRAIN_MAX-GRAIN_START):0;
   const h=.12+.16*t+.03*heavy;
   // the stalk is one smooth arc, like 🌾: upright as a sprout, bending further over as the ear fills
   const bend=g>0?.35+heavy*1.75:0,pts=[],N=14;let x=0,y=0;
@@ -588,7 +603,6 @@ function setSprout(c,n){
   // the curved stalk tips toward the character's left like the emoji
   sp.stem.parent.rotation.y=0;
 }
-function sp0(c){return c.sprout}
 function setPose(c,p){if(c.pose===p)return;c.pose=p;c.sitBody.visible=p==='sit';c.standBody.visible=p!=='sit'}
 const tmpV=new THREE.Vector3(),tmpD=new THREE.Vector3(),UPV=new THREE.Vector3(0,1,0);
 function setLimb(a,hand){
@@ -628,7 +642,7 @@ const me={x:(Math.random()-.5)*.8,z:15,ry:0,mode:'walk',seat:null,brew:null,sk:0
 me.sips=0;   // a fresh sprout on every visit
 me.char=makeChar(me.color);setSprout(me.char,me.sips);setBowlColor(me.char.hand,me.bowl);
 const others=new Map();
-let room=null,user=null,myId=null,myPeer='',names={};
+let room=null,myPeer='';
 const emotes=new Map(),greetSeen={};
 const inside=(x,z)=>z<WALL_Z;
 
@@ -685,7 +699,7 @@ function moveMe(dt){
 /* ===== seats ===== */
 function seatOwner(i){
   if(me.mode==='sit'&&me.seat===i)return {pr:me,char:me.char};
-  let best=null;for(const [peer,o] of others){if(o.pr.mode==='sit'&&o.pr.seat===i&&(!best||peer<best.peer))best={peer,pr:o.pr,char:o.char}}
+  let best=null;for(const [peer,o] of others){if(o.pr.mode==='sit'&&o.pr.seat===i){const t=o.pr.seatAt||9e15;if(!best||t<best.t||t===best.t&&peer<best.peer)best={peer,t,pr:o.pr,char:o.char}}}
   return best;
 }
 function updateRows(dt){
@@ -708,6 +722,7 @@ function updateSitButton(){
 }
 $('sitBtn').onclick=()=>{if(nearSeat!=null)sitAt(nearSeat)};
 function sitAt(i){
+  me.seatAt=Date.now();warmAudio();
   joy=null;joyEl.hidden=true;
   me.mode='sit';me.seat=i;me.x=seatPos[i].x;me.z=seatPos[i].z;me.ry=0;setPose(me.char,'sit');
   $('sitBtn').hidden=true;nearSeat=null;seats.forEach(s=>s.cu.material=cushionMat);
@@ -755,13 +770,13 @@ function brewText(msg){
   else if(me.act==='tb2tp')m='텀블러의 물을 다관에 붓는 중';
   else if(me.act==='tp2sk')m='다관의 차를 숙우에 따르는 중';
   else if(me.act==='sk2bd')m='숙우의 차를 보듬이에 따르는 중';
-  else if(me.brew==='idle')m=me.drink?`${t.n} ${me.steep}탕 마시는 중 · 다음 탕은 차 우리기`:'차 우리기를 눌러 시작해요';
+  else if(me.brew==='idle')m=me.steep===0?'차 우리기를 눌러 시작해요':me.drink?`${t.n} ${me.steep}탕 마시는 중 · 숙우가 비었어요`:`숙우가 비었어요 · ${me.steep+1}탕을 이어서 우려요`;
   else if(me.brew==='steep')m=`${t.n} ${me.steep}탕 우리는 중 · ${left}초`+(me.drink?' · 마시는 중':'');
   else if(me.drink)m=`${t.n} ${me.steep}탕 마시는 중 · 숙우에 ${me.sk}잔`;
   else m=`숙우에 ${t.n} ${me.steep}탕이 준비됐어요`;
   $('brewMsg').textContent=`SEAT ${String(me.seat+1).padStart(2,'0')} · ${m}`;
   $('brewbar').style.width=me.total&&me.until?clamp(100*(1-left/me.total),0,100)+'%':'0';
-  const bb=$('brewBtn');bb.hidden=false;bb.disabled=!(me.brew==='idle'&&!me.act);
+  const bb=$('brewBtn');bb.hidden=false;bb.disabled=!(me.brew==='idle'&&!me.act);bb.textContent=me.steep>0?`${me.steep+1}탕 우리기`:'차 우리기';   // same leaves, next infusion
   pb.hidden=false;pb.disabled=!(me.sk>0&&!me.act);pb.textContent=me.sk>0?`보듬이에 따르기 · ${me.sk}`:'보듬이에 따르기';
   $('sip').disabled=!me.drink||!!me.act;
 }
@@ -779,37 +794,51 @@ $('tea').onclick=e=>{const b=e.target.closest('.tea');if(!b||b.dataset.k===me.te
 
 /* ===== presence ===== */
 function presence(){if(!room)return;room.presence({away:document.hidden?1:0,name:me.name,color:me.color,bowl:me.bowl,x:+me.x.toFixed(2),z:+me.z.toFixed(2),ry:+me.ry.toFixed(2),mode:me.mode,seat:me.seat,
-  tea:me.tea,greet:me.greet.slice(0,60),greetAt:me.greetAt,brew:me.brew,steep:me.steep,sips:me.sips,cup:+(me.cup||0).toFixed(2),sk:me.sk,drink:me.drink,act:me.act,actAt:me.actAt,emote:me.emote,emoteAt:me.emoteAt}).catch(()=>{})}
+  tea:me.tea,greet:me.greet.slice(0,60),greetAt:me.greetAt,seatAt:me.seatAt||0,brew:me.brew,steep:me.steep,sips:me.sips,cup:+(me.cup||0).toFixed(2),sk:me.sk,drink:me.drink,act:me.act,actAt:me.actAt,emote:me.emote,emoteAt:me.emoteAt}).catch(()=>{})}
 let pT=null,lastPos=0;const presenceSoon=()=>{clearTimeout(pT);pT=setTimeout(presence,500)};
 
-$('say').onsubmit=e=>{e.preventDefault();const v=$('greet').value.replace(/https?:\/\/\S+|www\.\S+/gi,'').trim();if(!v)return;me.greet=v;me.greetAt=Date.now();greetSeen['me:'+me.greetAt]=performance.now();$('greet').value='';$('greet').blur();presence();renderGreets();renderTags()};
-function sipped(){me.sips++;setSprout(me.char,me.sips);
+let lastSay=0;
+$('say').onsubmit=e=>{e.preventDefault();if(performance.now()-lastSay<5000)return;lastSay=performance.now();const v=$('greet').value.replace(/https?:\/\/\S+|www\.\S+/gi,'').trim();if(!v)return;me.greet=v;me.greetAt=Date.now();greetSeen['me:'+me.greetAt]=performance.now();$('greet').value='';$('greet').blur();presence();renderGreets();renderTags()};
+let sipHintShown=false;
+function sipped(){
+  if(!sipHintShown){sipHintShown=true;const h=$('hint');h.textContent='보듬이를 들고 있으면 천천히 저절로 마셔요 · 한 모금 버튼으로 더 마실 수도 있어요';h.style.opacity=1;setTimeout(()=>{if(me.mode==='sit')h.style.opacity=0},9000)}me.sips++;setSprout(me.char,me.sips);
   me.cup=Math.max(0,(me.cup||0)-1/SIPS_PER_CUP);
   if(me.cup<=.001){me.cup=0;me.drink=false;brewText()}   // the bowl is empty: set it down, pour another from the 숙우 or brew again
   presenceSoon()}
 function emote(k){me.emote=k;me.emoteAt=Date.now();emotes.set('me',{k,at:performance.now()});presence()}
 $('bow').onclick=()=>emote('bow');$('sip').onclick=()=>emote('sip');
 
+const ACTS=['cd2tp','tb2tp','tp2sk','sk2bd'],BREWS=['idle','steep','ready'],HEX=/^#[0-9a-f]{6}$/i;
+const cleanText=(t,n)=>typeof t==='string'?t.replace(/https?:\/\/\S+|www\.\S+/gi,'').replace(/[\u0000-\u001f\u200b-\u200f\u202a-\u202e]/g,'').slice(0,n):'';
+const int=(v,a,b,d=0)=>Number.isInteger(+v)&&+v>=a&&+v<=b?+v:d,numIn=(v,a,b,d=0)=>Number.isFinite(+v)?clamp(+v,a,b):d;
+function sanitize(r){const seat=int(r.seat,0,seatPos.length-1,-1),mode=r.mode==='sit'&&seat>=0&&realSeat(seat)?'sit':'walk';
+  return {x:numIn(r.x,-30,30),z:numIn(r.z,-6,30,15),ry:numIn(r.ry,-50,50),mode,seat:mode==='sit'?seat:null,seatAt:numIn(r.seatAt,0,9e15),
+    name:cleanText(r.name,12).trim(),color:HEX.test(r.color)?r.color:null,bowl:HEX.test(r.bowl)?r.bowl:null,
+    tea:TEAS.some(t=>t.k===r.tea)?r.tea:'green',brew:BREWS.includes(r.brew)?r.brew:null,act:ACTS.includes(r.act)?r.act:null,actAt:numIn(r.actAt,0,9e15),
+    steep:int(r.steep,0,99),sk:int(r.sk,0,3),cup:numIn(r.cup,0,1),drink:!!r.drink&&mode==='sit',sips:int(r.sips,0,100000),
+    emote:r.emote==='bow'||r.emote==='sip'?r.emote:null,emoteAt:numIn(r.emoteAt,0,9e15),greet:cleanText(r.greet,60),greetAt:numIn(r.greetAt,0,9e15),away:r.away?1:0}}
 function syncPeers(list){
   const seen=new Set();
   for(const p of list){
     if(p.kind!=='viewer')continue;if(p.sameTab){myPeer=p.peer;continue}
-    const pr=p.presence||{};if(typeof pr.x!=='number'||typeof pr.z!=='number')continue;
+    const raw=p.presence||{};if(typeof raw.x!=='number'||typeof raw.z!=='number')continue;const pr=sanitize(raw);
     seen.add(p.peer);let o=others.get(p.peer);
-    if(!o){o={char:makeChar(typeof pr.color==='string'&&/^#[0-9a-f]{6}$/i.test(pr.color)?pr.color:ROBES[others.size%ROBES.length]),x:pr.x,z:pr.z,ry:+pr.ry||0,pr,by:p.by,fresh:true};others.set(p.peer,o)}
+    if(!o){o={char:makeChar(pr.color||ROBES[others.size%ROBES.length]),x:pr.x,z:pr.z,ry:+pr.ry||0,pr,by:p.by,fresh:true};others.set(p.peer,o)}
     if(pr.emoteAt&&pr.emoteAt!==o.pr.emoteAt&&!o.fresh)emotes.set(p.peer,{k:pr.emote,at:performance.now()});
-    if(pr.greetAt&&greetSeen[p.peer+':'+pr.greetAt]==null)greetSeen[p.peer+':'+pr.greetAt]=performance.now();
-    o.pr=pr;o.by=p.by;o.fresh=false;setPose(o.char,pr.mode==='sit'?'sit':'stand');if(typeof pr.bowl==='string'&&/^#[0-9a-f]{6}$/i.test(pr.bowl))setBowlColor(o.char.hand,pr.bowl);setSprout(o.char,clamp(+pr.sips||0,0,100000));
+    if(pr.greet&&pr.greetAt&&pr.greetAt!==o.pr.greetAt&&o.lastGreet&&performance.now()-o.lastGreet<5000){pr.greet=o.pr.greet;pr.greetAt=o.pr.greetAt}
+    if(pr.greetAt&&greetSeen[p.peer+':'+pr.greetAt]==null){greetSeen[p.peer+':'+pr.greetAt]=performance.now();o.lastGreet=performance.now()}
+    o.pr=pr;o.by=p.by;o.fresh=false;setPose(o.char,pr.mode==='sit'?'sit':'stand');if(pr.bowl)setBowlColor(o.char.hand,pr.bowl);setSprout(o.char,pr.sips);
   }
   for(const [peer,o] of others)if(!seen.has(peer)){scene.remove(o.char.g);others.delete(peer);dropTag(peer)}
-  if(me.mode==='sit'&&myPeer){for(const [peer,o] of others)if(o.pr.mode==='sit'&&o.pr.seat===me.seat&&peer<myPeer){standUp('다른 분이 먼저 앉은 자리예요. 옆자리로 가볼까요');break}}
+  // a cushion belongs to whoever sat on it first; the later claim gives way (same instant: the smaller key keeps it)
+  if(me.mode==='sit'&&myPeer){for(const [peer,o] of others)if(o.pr.mode==='sit'&&o.pr.seat===me.seat){const a=o.pr.seatAt||0,b=me.seatAt||0;
+    if(a&&(a<b||a===b&&peer<myPeer)){standUp('다른 분이 먼저 앉은 자리예요. 옆자리로 가볼까요');break}}}
   nearSeat=-1;renderGreets();
 }
 
 /* ===== name tags and greetings ===== */
 const labelsEl=$('labels'),tags={};
 function dropTag(k){if(tags[k]){tags[k].remove();delete tags[k]}}
-async function resolveNames(){const ids=[myId,...[...others.values()].map(o=>o.by||o.pr.uid)].filter(x=>typeof x==='string');if(user&&ids.length){try{const ps=await user.profiles(ids);for(const id of ids)names[id]=ps[id]?.name||''}catch(e){}}}
 const nameOfOther=o=>{const n=typeof o.pr.name==='string'?o.pr.name.trim().slice(0,12):'';return n||'이삭님'};
 function statusOf(pr){if(pr.mode!=='sit')return pr.z<WALL_Z?'자리를 찾는 중':'마당을 걷는 중';const t=teaOf(pr.tea);
   if(pr.act==='cd2tp')return '찻잎 넣는 중';if(pr.act==='tb2tp')return '다관에 물 붓는 중';if(pr.act==='tp2sk')return '숙우에 따르는 중';if(pr.act==='sk2bd')return '보듬이에 따르는 중';
@@ -835,14 +864,11 @@ function renderGreets(){
 function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);cam.aspect=w/h;cam.fov=w/h<.8?62:50;cam.updateProjectionMatrix()}
 addEventListener('resize',resize);resize();
 const tgt=new THREE.Vector3();
-let camF=0;const tblC=new THREE.Vector3();
 function updateCam(){
   camS.th=angLerp(camS.th,camT.th,.12);camS.el+=(camT.el-camS.el)*.12;camS.r+=(camT.r-camS.r)*.12;
   const c=me.char.g.position;tgt.set(c.x,c.y+(me.mode==='sit'?.95:1.15),c.z+(me.mode==='sit'?-.4:0));
-  const busy=me.mode==='sit'&&!!me.act&&!document.body.classList.contains('cha');camF+=((busy?1:0)-camF)*.05;
-  if(camF>.001)tgt.lerp(tblC.set(c.x+.05,c.y+.33,c.z-.66),camF);   // look at my tea table from beside it
-  const el=camS.el+(.62-camS.el)*camF,r=camS.r+(1.05-camS.r)*camF,th=camS.th+(1.35-camS.th)*camF;
-  const ce=Math.cos(el);cam.position.set(tgt.x+Math.sin(th)*ce*r,tgt.y+Math.sin(el)*r,tgt.z+Math.cos(th)*ce*r);
+  const ce=Math.cos(camS.el);
+  cam.position.set(tgt.x+Math.sin(camS.th)*ce*camS.r,tgt.y+Math.sin(camS.el)*camS.r,tgt.z+Math.cos(camS.th)*ce*camS.r);   // the view stays put while brewing
   cam.position.y=Math.max(cam.position.y,.5);cam.lookAt(tgt);
   sky.position.copy(cam.position);starPts.position.copy(cam.position);
   const fade=clamp((cam.position.y-4.6)/1.4,0,1);roofM.opacity=1-fade*.88;roofM.depthWrite=fade<.5;ceilM.opacity=1-fade*.9;ceilM.depthWrite=fade<.5;
@@ -943,6 +969,11 @@ function frame(now){
 }
 requestAnimationFrame(frame);
 
+// after the season: no entry, no connection, just the way to the next sunrise spot
+let closed=false;
+function closeRoom(){if(closed)return;closed=true;try{room&&room.bye&&room.bye()}catch(e){}room=null;$('gate').hidden=true;
+  const next=NEXT_URL?`<a class="btn main" href="${esc(NEXT_URL)}">${esc(NEXT_PLACE||'새 차실')}로 가기</a>`:'<span class="fine">새 장소는 보리 인스타그램에서 알려드릴게요.</span>';
+  document.body.insertAdjacentHTML('beforeend',`<div class="gate"><div class="gate-card"><div class="logo">BORIH MORNING</div><p>${esc(PLACE)} 보리 차실은 문을 닫았어요.<br>보리 차실은 이제 새로운 일출 장소로 옮겨갑니다.${NEXT_PLACE?`<br>다음 차실은 <b>${esc(NEXT_PLACE)}</b>이에요.`:''}</p>${next}</div></div>`)}
 /* ===== clock + session ===== */
 function tick(){
   const now=Date.now(),t=sceneTime(),b=dayBase(t),sr=sunrise(b),left=Math.round((sr-t)/60e3);
@@ -951,8 +982,8 @@ function tick(){
   const note=left>0&&left<180?` · 해 뜨기까지 ${left}분`:left<=0&&left>-40?' · 해가 떴어요':lss>0&&lss<120?` · 해 지기까지 ${lss}분`:lss<=0&&lss>-40?' · 해가 졌어요':'';
   $('sr').innerHTML=`정동진 일출 <b>${hm(sr)}</b> · 일몰 <b>${hm(ss)}</b>${note}`;
   // 정동진 차실: open any time for two weeks, then the tea room moves to the next sunrise spot
-  const OPEN_END=Date.UTC(2026,10,16,15,0); // = 2026-11-17 00:00 KST, i.e. open through the end of 11월 16일
   const daysLeft=Math.ceil((OPEN_END-now)/864e5);
+  if(now>=OPEN_END)closeRoom();
   $('status').innerHTML=now<OPEN_END?`<span class="dot on"></span><b>정동진 차실</b> · 11월 16일까지 열려 있어요${daysLeft<=3?` · ${daysLeft}일 남음`:''}`:`<span class="dot"></span>정동진 차실은 닫혔어요 · 다음 일출 맛집에서 만나요`;
   if(me.mode==='walk')$('hint').textContent=inside(me.x,me.z)?(TOUCH?'빈 방석 앞에 서면 앉기 버튼이 나와요':'빈 방석 앞에 서서 Enter를 누르거나 앉기 버튼을 눌러요'):(TOUCH?'화면을 끌어 걸어보세요 · 출입문으로 들어가요':'마우스로 끌거나 방향키(WASD)로 걸어요 · 출입문으로 들어가요');
 }
@@ -962,7 +993,14 @@ $('pv').addEventListener('input',()=>{$('pvOn').checked=true;tick()});$('pvOn').
 /* ===== sound ===== */
 let ac=null;
 const audio=()=>{if(!ac){try{ac=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}return ac};
-function chime(){const a=ac;if(!a||a.state!=='running')return;[523.25,784].forEach((f,i)=>{const o=a.createOscillator(),g=a.createGain(),t0=a.currentTime+i*.18;o.frequency.value=f;g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(.1,t0+.02);g.gain.exponentialRampToValueAtTime(.0001,t0+2.4);o.connect(g).connect(a.destination);o.start(t0);o.stop(t0+2.5)})}
+function warmAudio(){const a=audio();if(a&&a.state!=='running')a.resume().catch(()=>{})}
+addEventListener('pointerdown',warmAudio,{passive:true});addEventListener('keydown',warmAudio);
+function chime(){
+  // also a visible cue: the message glows, a short buzz where allowed, and the tab title if the page is behind another window
+  const m=$('brewMsg');m.classList.remove('ding');void m.offsetWidth;m.classList.add('ding');
+  try{navigator.vibrate&&navigator.vibrate([60,80,60])}catch(e){}
+  if(document.hidden){const t0=document.title;let n=0;const iv=setInterval(()=>{document.title=n++%2?t0:'🍵 차가 우러났어요';if(n>12||!document.hidden){clearInterval(iv);document.title=t0}},900)}
+  const a=ac;if(!a||a.state!=='running')return;[523.25,784].forEach((f,i)=>{const o=a.createOscillator(),g=a.createGain(),t0=a.currentTime+i*.18;o.frequency.value=f;g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(.1,t0+.02);g.gain.exponentialRampToValueAtTime(.0001,t0+2.4);o.connect(g).connect(a.destination);o.start(t0);o.stop(t0+2.5)})}
 // gentle shore, played as a media track (an <audio> loop) so it sounds even when the phone's ringer is on silent.
 // The loop is rendered once in the browser: slow, low swells with long quiet gaps, then crossfaded so it repeats seamlessly.
 let wavesOn=false,waveAudio=null,waveRendering=null,readyUrl=null;
@@ -1041,7 +1079,7 @@ brewText();renderTags();
 /* ===== together, through Supabase Realtime: presence for who is here, broadcast for footsteps ===== */
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
-const APP_V='26';
+const APP_V='29';
 $('ver').textContent='v'+APP_V;
 function connectRoom(){
   // Presence only says who is here (tracked once per connection). Everything else rides broadcasts:
@@ -1065,15 +1103,18 @@ function connectRoom(){
       return out};
     const emit=j=>{if(cb)cb({peers:peersNow(),joined:j?[1]:[]})};
     const peer=k=>peers[k]||(peers[k]={seen:Date.now()});
+    // each visitor may send at most a handful of state updates and footsteps a second; the rest is ignored
+    const budget={},allow=(k,kind,per)=>{const now=performance.now(),b=budget[k+kind]||(budget[k+kind]={t:now,n:0});if(now-b.t>1000){b.t=now;b.n=0}return ++b.n<=per};
+    const tooMany=()=>Object.keys(peers).length>=60;
     ch.on('presence',{event:'sync'},()=>emit(true));
     ch.on('presence',{event:'join'},({key})=>{if(key!==myKey)setTimeout(()=>sendSt(true),300+Math.random()*700)});
     ch.on('presence',{event:'leave'},({key})=>{const q=peers[key];if(q&&q.st&&q.st.away)q.leftAt=Date.now();else delete peers[key];emit(false)});
     ch.on('presence',{event:'join'},({key})=>{const q=peers[key];if(q)q.leftAt=0});
-    ch.on('broadcast',{event:'st'},({payload:p})=>{if(!p||typeof p.k!=='string'||p.k===myKey||typeof p.d!=='string'||p.d.length>2000)return;
+    ch.on('broadcast',{event:'st'},({payload:p})=>{if(!p||typeof p.k!=='string'||p.k.length>40||p.k===myKey||typeof p.d!=='string'||p.d.length>2000)return;if(!allow(p.k,'s',6)||!peers[p.k]&&tooMany())return;
       let o;try{o=JSON.parse(p.d)}catch(e){return}if(!o||typeof o!=='object')return;
       o.name=typeof p.n==='string'?p.n.slice(0,12):'';const q=peer(p.k);q.st=o;q.stT=num(o.t);q.seen=Date.now();emit(false)});
     ch.on('broadcast',{event:'bye'},({payload:p})=>{if(p&&typeof p.k==='string'&&p.k!==myKey){delete peers[p.k];emit(false)}});
-    ch.on('broadcast',{event:'pos'},({payload:p})=>{if(!p||typeof p.k!=='string'||p.k===myKey)return;
+    ch.on('broadcast',{event:'pos'},({payload:p})=>{if(!p||typeof p.k!=='string'||p.k.length>40||p.k===myKey||!peers[p.k]||!allow(p.k,'p',20))return;
       const q=peer(p.k);q.pos={x:clamp(num(p.x),-30,30),z:clamp(num(p.z,15),-6,30),ry:num(p.ry),t:num(p.t)};q.seen=Date.now();emit(false)});
     function sendSt(force){stTimer=null;if(!ready||!latest)return;
       const o=Object.assign({},latest,{t:Date.now()});delete o.name;const d=JSON.stringify(o),core=d.replace(/"t":\d+/,'');
@@ -1105,24 +1146,20 @@ function connectRoom(){
 }
 // a phone or computer still holding an older copy of the page would end up in a different room, so check for a newer copy now and then
 setInterval(async()=>{try{const r=await fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'});const t=await r.text();const m=t.match(/const APP_V='(\d+)'/);
-  if(m&&m[1]!==APP_V){   // a newer copy: reload, and come back to the same cushion with the same tea and sprout
+  if(m&&m[1]!==APP_V){   // a newer copy: reload once, and come back to the same cushion with the same tea and sprout
+    let done='';try{done=sessionStorage.getItem('bm.reloadedFor')||''}catch(e){}if(done===m[1])return;try{sessionStorage.setItem('bm.reloadedFor',m[1])}catch(e){}
     try{sessionStorage.setItem('bm.resume',JSON.stringify({seat:me.mode==='sit'?me.seat:null,x:me.x,z:me.z,ry:me.ry,sips:me.sips,at:Date.now()}))}catch(e){}
     location.reload()}}catch(e){}},60000);
 document.addEventListener('visibilitychange',()=>{if(!room)return;presence();room.flush&&room.flush()});
-addEventListener('pagehide',()=>{if(room&&room.bye)room.bye()});addEventListener('beforeunload',()=>{if(room&&room.bye)room.bye()});   // leaving for good: take the cushion with you
-function demoDrop(){if(location.hash!=='#demo-drop')return;me.sips=20;setSprout(me.char,20);setTimeout(()=>{me.sips=21;setSprout(me.char,21)},2500)}
-function demoGuests(){demoDrop();if(location.hash!=='#demo')return;rowsShown=ROW_Z.length;
-  seatPos.forEach((p,i)=>{if(!realSeat(i)||i===me.seat)return;const c=makeChar(ROBES[i%ROBES.length]);setPose(c,'sit');c.g.position.copy(p);
-    const tick=()=>{animateChar(c,performance.now(),.016,{bow:0,lift:0,hold:false,full:false,level:0});requestAnimationFrame(tick)};tick()})}
+addEventListener('pagehide',()=>{if(room&&room.bye)room.bye();try{readyUrl&&URL.revokeObjectURL(readyUrl)}catch(e){}});addEventListener('beforeunload',()=>{if(room&&room.bye)room.bye()});   // leaving for good: take the cushion with you
 async function enter(){
   renderTags();
   const r=await connectRoom();
+  if(closed){r&&r.bye&&r.bye();return}
   if(!r){$('solo').hidden=false;return}
   room=r;myPeer=myKey;
   room.onPeers(ch=>{syncPeers(ch.peers);renderTags()});
   let rs=null;try{rs=JSON.parse(sessionStorage.getItem('bm.resume')||'null');sessionStorage.removeItem('bm.resume')}catch(e){}
-  setTimeout(demoGuests,2500);
-  if(location.hash==='#grains')setTimeout(()=>{me.sips=21;setSprout(me.char,21)},3000);   // preview of the ear shedding
   if(rs&&Date.now()-rs.at<120000){me.sips=+rs.sips||0;setSprout(me.char,me.sips);
     if(Number.isInteger(rs.seat))setTimeout(()=>{if(!seatOwner(rs.seat))sitAt(rs.seat)},1500);
     else if(typeof rs.x==='number'){me.x=rs.x;me.z=rs.z;me.ry=+rs.ry||0}}
@@ -1130,7 +1167,8 @@ async function enter(){
 }
 // ask for a name once, then remember it on this device
 me.name=(store.get('nick')||'').slice(0,12);
-if(me.name)enter();
+if(Date.now()>=OPEN_END)closeRoom();
+else if(me.name)enter();
 else{$('gate').hidden=false;setTimeout(()=>$('nick').focus(),300);
   $('gateForm').onsubmit=e=>{e.preventDefault();const n=$('nick').value.replace(/\s+/g,' ').trim().slice(0,12);if(!n){$('nick').focus();return}
     me.name=n;store.set('nick',n);$('gate').hidden=true;renderTags();enter()}}
