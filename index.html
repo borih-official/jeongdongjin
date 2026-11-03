@@ -256,7 +256,7 @@ const box=(w,h,d,m,x,y,z)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
 
 /* ===== land, cliff, sea, sky ===== */
 const cliffM=mat('#2f2a25',{roughness:1});
-box(90,7.2,60,cliffM,0,-3.75,25).receiveShadow=true;
+box(90,7.2,60,cliffM,0,-3.82,25).receiveShadow=true;
 for(let k=0;k<26;k++){const r=new THREE.Mesh(new THREE.DodecahedronGeometry(1+Math.random()*1.6,0),cliffM);r.position.set(-40+k*3.2+Math.random(),-6.2-Math.random()*.8,-5.6-Math.random()*2.4);r.rotation.set(Math.random()*3,Math.random()*3,0);r.scale.y=.7;scene.add(r)}
 // season follows the Korean calendar: Sept–Nov is autumn on the cliff
 const MON=kst(Date.now()).getUTCMonth()+1,AUTUMN=MON>=9&&MON<=11;
@@ -265,47 +265,172 @@ box(90,.2,60,grassM,0,-.28,25).receiveShadow=true;
 const UP3=new THREE.Vector3(0,1,0),HILLS=[];
 for(let k=0;k<14;k++){const h=new THREE.Mesh(new THREE.SphereGeometry(1,16,10),grassM);h.position.set(-60+k*9+Math.random()*4,-1,34+Math.random()*25);h.scale.set(12+Math.random()*8,4+Math.random()*7,10);scene.add(h);HILLS.push(h)}
 // autumn on the hills behind: each hill takes a turned colour and is dotted with crowns of red, rust, gold and a few dark pines
+/* ===== far slopes: small picture-book trees (해송, 단풍나무, 은행나무) instead of round dots ===== */
+const LUMPY=(()=>{const g=new THREE.SphereGeometry(1,9,6),pa=g.attributes.position,hv=(x,y,z)=>{const s=Math.sin(x*12.9898+y*78.233+z*37.719)*43758.5453;return s-Math.floor(s)};
+  for(let i=0;i<pa.count;i++){const x=pa.getX(i),y=pa.getY(i),z=pa.getZ(i),f=.8+.32*hv(Math.round(x*100)/100,Math.round(y*100)/100,Math.round(z*100)/100);pa.setXYZ(i,x*f,y*f,z*f)}
+  g.computeVertexNormals();return g})();
+function farTrees(spots,autumn){   // spots: [{p:Vector3, s:size}]
+  const R=(a,b)=>a+Math.random()*(b-a),pick=a=>a[Math.floor(Math.random()*a.length)];
+  const PINE=['#22301f','#2a3a24','#1f2b1c','#2f4128'],MAP=autumn?['#b8341f','#c94a24','#d2642a','#a32a1c','#d97a2e']:['#4f6b34','#5b7a3c'],GIN=autumn?['#e3b93a','#dcae2c','#efd060']:['#6f8a3a','#7d9a44'];
+  const trunks=[],lumps=[];
+  spots.forEach(({p,s})=>{const r=Math.random(),lean=R(-.12,.12);
+    if(r<.45){const h=1.3*s;trunks.push([p,h,.07*s,lean]);for(let k=0;k<3;k++){const y=h*(.6+k*.2),w=s*(.75-k*.15);lumps.push([p.x+R(-.3,.3)*s+lean*y,p.y+y,p.z+R(-.3,.3)*s,w,w*.38,pick(PINE)])}}
+    else if(r<.8){const h=.75*s;trunks.push([p,h,.07*s,lean*.5]);const c=pick(MAP);for(let k=0;k<3;k++)lumps.push([p.x+R(-.35,.35)*s,p.y+h+R(.1,.5)*s,p.z+R(-.35,.35)*s,s*R(.4,.55),s*R(.35,.5),k?pick(MAP):c])}
+    else{const h=1.2*s;trunks.push([p,h,.06*s,0]);[.5,.38,.26].forEach((w,k)=>lumps.push([p.x,p.y+h*(.55+k*.28),p.z,s*w,s*w*1.1,pick(GIN)]))}});
+  const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),c=new THREE.Color(),v=new THREE.Vector3(),sc=new THREE.Vector3();
+  const tm=new THREE.InstancedMesh(new THREE.CylinderGeometry(.7,1,1,5),mat('#3d302a',{roughness:1}),trunks.length);
+  trunks.forEach(([p,h,r,l],k)=>{e.set(0,0,l);q.setFromEuler(e);m4.compose(v.set(p.x,p.y+h/2,p.z),q,sc.set(r,h,r));tm.setMatrixAt(k,m4)});scene.add(tm);
+  const lm=new THREE.InstancedMesh(LUMPY,new THREE.MeshStandardMaterial({roughness:1}),lumps.length);
+  lumps.forEach(([x,y,z,w,h,col],k)=>{e.set(0,Math.random()*6.3,0);q.setFromEuler(e);m4.compose(v.set(x,y,z),q,sc.set(w,h,w));lm.setMatrixAt(k,m4);lm.setColorAt(k,c.set(col).multiplyScalar(.82+Math.random()*.22))});scene.add(lm)}
 if(kst(Date.now()).getUTCMonth()+1>=9&&kst(Date.now()).getUTCMonth()+1<=11){
   const HILL_COLS=['#7a4a26','#8a5a2a','#6e5a2c','#7d3f24','#86662e'],CROWN=['#b4502a','#c8702c','#d89a3c','#9a3a22','#c9a24a','#a8622a','#2f3d2c','#e0b552','#8c2f1e'];
   HILLS.forEach((h,k)=>{h.material=mat(HILL_COLS[k%HILL_COLS.length],{roughness:1})});
-  const LOWH=matchMedia('(pointer:coarse)').matches&&Math.min(screen.width,screen.height)<600,N=LOWH?700:1600;
-  const g=new THREE.IcosahedronGeometry(1,3),im=new THREE.InstancedMesh(g,new THREE.MeshStandardMaterial({roughness:1}),N);
-  const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),c=new THREE.Color(),v=new THREE.Vector3(),sc=new THREE.Vector3();let n=0;
-  for(let t=0;t<N*3&&n<N;t++){const h=HILLS[Math.floor(Math.random()*HILLS.length)],a=Math.random()*Math.PI*2,b=Math.acos(Math.random()*.9+.1);
-    v.set(Math.cos(a)*Math.sin(b),Math.cos(b),Math.sin(a)*Math.sin(b)).multiply(h.scale).add(h.position);if(v.y<-.1||v.z<30)continue;
-    const r=.9+Math.random()*1.3;sc.set(r,r*(.8+Math.random()*.6),r);q.setFromAxisAngle(UP3,Math.random()*6.3);m4.compose(v,q,sc);im.setMatrixAt(n,m4);
-    im.setColorAt(n,c.set(CROWN[Math.floor(Math.random()*CROWN.length)]).multiplyScalar(.8+Math.random()*.25));n++}
-  im.count=n;scene.add(im);
+  const LOWH=matchMedia('(pointer:coarse)').matches&&Math.min(screen.width,screen.height)<600,N=LOWH?450:950,spots=[];
+  for(let t=0;t<N*3&&spots.length<N;t++){const h=HILLS[Math.floor(Math.random()*HILLS.length)],a=Math.random()*Math.PI*2,b=Math.acos(Math.random()*.9+.1);
+    const v=new THREE.Vector3(Math.cos(a)*Math.sin(b),Math.cos(b),Math.sin(a)*Math.sin(b)).multiply(h.scale).add(h.position);if(v.y<-.1||v.z<30)continue;
+    v.y-=.3;spots.push({p:v,s:1.1+Math.random()*1.1})}
+  farTrees(spots,true);
 }
-const pineM=mat('#2c3a2c',{roughness:1}),trunkM=mat('#4a3a2c');
-for(let k=0;k<34;k++){const side=k%2?1:-1,x=side*(11+Math.random()*28),z=-3+Math.random()*34;
-  const t=new THREE.Mesh(new THREE.ConeGeometry(.9+Math.random()*.6,3.4+Math.random()*2.4,7),pineM);t.position.set(x,2.1,z);t.castShadow=true;scene.add(t);
-  const tr=new THREE.Mesh(new THREE.CylinderGeometry(.12,.15,.8,6),trunkM);tr.position.set(x,.2,z);scene.add(tr)}
+/* ===== trees: 해송 along the cliff and yard, with 단풍나무 and 은행나무 mixed in ===== */
+// leaf shapes drawn once, used for the leaves on the trees, on the ground and drifting down
+const LEAF_TEX=(()=>{const mk=draw=>{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');draw(x);const t=new THREE.CanvasTexture(c);t.anisotropy=4;return t};
+  const veins=(x,cx,cy,tips)=>{x.strokeStyle='rgba(120,110,100,.55)';x.lineWidth=2;tips.forEach(([tx,ty])=>{x.beginPath();x.moveTo(cx,cy);x.lineTo(tx,ty);x.stroke()})};
+  return{
+    // 단풍잎: five pointed, toothed lobes, the two lowest small
+    maple:mk(x=>{const cx=64,cy=70;x.fillStyle='#fff';x.beginPath();const tips=[];
+      for(let i=0;i<=360;i++){const th=(i-90)*Math.PI/180,u=((i/72+.5)%1+1)%1,tri=1-Math.abs(u*2-1),lobe=Math.pow(tri,1.5);
+        const down=Math.max(0,Math.sin(th));const r=(24+36*lobe*(1-.4*down)+2.2*Math.abs(Math.sin(i*Math.PI/7))*tri)*(1-.12*down);
+        const px=cx+Math.cos(th)*r,py=cy+Math.sin(th)*r;i?x.lineTo(px,py):x.moveTo(px,py);if(i%72===0&&i<360)tips.push([px,py])}
+      x.closePath();x.fill();veins(x,cx,cy,tips);x.strokeStyle='#fff';x.lineWidth=3;x.beginPath();x.moveTo(cx,cy);x.lineTo(cx,124);x.stroke()}),
+    // 은행잎: a fan opening upward from the stem, wavy edge, a notch in the middle
+    ginkgo:mk(x=>{const cx=64,cy=98;x.fillStyle='#fff';x.beginPath();x.moveTo(cx,cy);const tips=[];
+      for(let a=-152;a<=-28;a+=1){const th=a*Math.PI/180,d=(a+90)/9;const r=62*(1-.25*Math.exp(-d*d))+2.5*Math.sin(a*.6);
+        const px=cx+Math.cos(th)*r,py=cy+Math.sin(th)*r;x.lineTo(px,py);if(a%14===0)tips.push([px,py])}
+      x.closePath();x.fill();veins(x,cx,cy,tips);x.strokeStyle='#fff';x.lineWidth=4;x.beginPath();x.moveTo(cx,cy-4);x.lineTo(cx,127);x.stroke()})}})();
+const LEAF_M={maple:new THREE.MeshStandardMaterial({map:LEAF_TEX.maple,alphaTest:.5,side:THREE.DoubleSide,roughness:.9}),
+  ginkgo:new THREE.MeshStandardMaterial({map:LEAF_TEX.ginkgo,alphaTest:.5,side:THREE.DoubleSide,roughness:.9})};
+const LITTER_MAPLE=['#8a3a24','#9c4a28','#7a3122','#a0603a','#6e3a26','#8c5a34','#5e3a28'],LITTER_GINKGO=['#c09a40','#a98638','#b89448','#8e7038','#9a7a4a','#7a5e36'];
+const MAPLE_COLS=['#b8341f','#c94a24','#d2642a','#a32a1c','#d97a2e','#8f2418'],GINKGO_COLS=['#e8c240','#dcae2c','#efd060','#d49d22'];
+const pineM=mat('#2c3a2c',{roughness:1}),trunkM=mat('#4a3a2c');   // kept for anything else that uses them
+(function grove(){
+  const R=(a,b)=>a+Math.random()*(b-a),V=(x,y,z)=>new THREE.Vector3(x,y,z),UP=V(0,1,0);
+  const segs=[],blobs=[],cards={maple:[],ginkgo:[]};
+  const seg=(a,b,r)=>segs.push([a.clone(),b.clone(),r]);
+  const blob=(p,s,col)=>blobs.push([p.clone(),s.clone(),col]);
+  const sprinkle=(kind,p,r,n,cols)=>{for(let k=0;k<n;k++){const d=V(R(-1,1),R(-.6,1),R(-1,1)).normalize();cards[kind].push([p.clone().add(d.multiplyScalar(r*R(.85,1.08))),cols[Math.floor(Math.random()*cols.length)]])}};
+  // a crown cluster: three darker inner lumps, the outside covered in leaves
+  const clump=(kind,p,r,cols,n)=>{for(let k=0;k<3;k++){const o=p.clone().add(V(R(-.5,.5)*r,R(-.3,.3)*r,R(-.5,.5)*r)),rr=r*R(.55,.75);blobs.push([o,V(rr,rr*.85,rr),cols[Math.floor(Math.random()*cols.length)],.55])}
+    sprinkle(kind,p,r,n,cols)};
+  const lean=(dir,amt)=>V(dir.x*amt,1,dir.z*amt).normalize();
+  // 해송: a dark trunk that bends as it climbs, near-level limbs, and flat cloud-like pads of needles
+  function pine(x,z,sea){const h=R(4.2,6.6),dir=sea?V(R(-.3,.3),0,-1):V(R(-1,1),0,R(-1,1)).normalize();let p=V(x,GROUND,z),r=R(.17,.24);
+    const pts=[p.clone()];for(let i=1;i<=4;i++){const q=p.clone().add(lean(dir,(sea?.55:.25)+R(-.15,.15)+(i%2?.12:-.08)).multiplyScalar(h/4));seg(p,q,r);r*=.8;p=q;pts.push(q.clone())}
+    const PADC=['#22301f','#2a3a24','#1f2b1c','#2f4128'];
+    pts.slice(2).forEach((b,i)=>{const nb=i===2?2:3;for(let k=0;k<nb;k++){const a=R(0,6.3),L=R(.9,1.9)*(1-i*.15),e=b.clone().add(V(Math.cos(a)*L,R(.05,.35),Math.sin(a)*L));seg(b,e,.07);
+      const pr=R(.75,1.15)*(1-i*.12);blob(e.clone().add(V(0,.12,0)),V(pr,pr*.42,pr*R(.8,1)),PADC[Math.floor(Math.random()*4)]);
+      if(Math.random()<.6)blob(e.clone().add(V(R(-.4,.4),.32,R(-.4,.4))),V(pr*.65,pr*.32,pr*.6),PADC[Math.floor(Math.random()*4)])}});
+    const top=pts[4];blob(top.clone().add(V(0,.25,0)),V(1.05,.5,1),PADC[1]);blob(top.clone().add(V(.2,.65,.1)),V(.6,.32,.6),PADC[3])}
+  // 단풍나무: a short trunk that forks into spreading limbs, a broad rounded crown of red and orange
+  function maple(x,z,autumn){const h=R(1.1,1.6),b=V(x,GROUND+h,z);seg(V(x,GROUND,z),b,R(.12,.16));
+    const cols=autumn?MAPLE_COLS:['#4f6b34','#5b7a3c','#466030'];const n=3+Math.floor(Math.random()*2);
+    for(let k=0;k<n;k++){const a=k/n*6.3+R(-.3,.3),L=R(1.2,1.7),e=b.clone().add(V(Math.cos(a)*L*.7,L*.8,Math.sin(a)*L*.7));seg(b,e,.08);
+      for(let j=0;j<2;j++){const a2=a+R(-.8,.8),f=e.clone().add(V(Math.cos(a2)*R(.4,.8),R(.3,.7),Math.sin(a2)*R(.4,.8)));seg(e,f,.045);
+        clump('maple',f,R(.5,.7),cols,LOWT?12:24)}}
+    clump('maple',b.clone().add(V(0,R(1.6,2),0)),R(.7,.85),cols,LOWT?14:28)}
+  // 은행나무: a tall straight trunk, limbs angled upward, a crown narrowing to the top, all yellow
+  function ginkgo(x,z,autumn){const h=R(4.4,5.6),cols=autumn?GINKGO_COLS:['#6f8a3a','#7d9a44'];seg(V(x,GROUND,z),V(x,GROUND+h,z),R(.13,.17));
+    for(let i=0;i<7;i++){const y=GROUND+h*(.32+i*.1),s=1-i*.11,a=i*2.3+R(-.4,.4),L=R(.9,1.4)*s,b=V(x,y,z),e=b.clone().add(V(Math.cos(a)*L,L*.75,Math.sin(a)*L));seg(b,e,.05);
+      clump('ginkgo',e,R(.45,.6)*(.6+.4*s),cols,LOWT?10:20)}
+    clump('ginkgo',V(x,GROUND+h+.25,z),.42,cols,LOWT?8:16)}
+  const LOWT=LOW;
+  // pines everywhere the old cone pines stood, a few at the cliff edge leaning out to sea
+  for(let k=0;k<34;k++){const side=k%2?1:-1;pine(side*(11+Math.random()*28),-3+Math.random()*34,false)}
+  [[-10.5,-3.4],[11.2,-2.8],[-15,-3.9],[16.5,-3.6]].forEach(([x,z])=>pine(x,z,true));
+  // turning trees between them: a few right by the yard, the rest further out
+  [[-7.5,9,'m'],[7.8,12.5,'g'],[-8.8,17,'g'],[8.5,19,'m'],[-9.6,4.5,'m'],[9.8,6.5,'m']].forEach(([x,z,t])=>t==='m'?maple(x,z,AUTUMN):ginkgo(x,z,AUTUMN));
+  for(let k=0;k<(LOW?12:20);k++){const side=k%2?1:-1,x=side*R(10,26),z=R(-1,30);(k%5<3?maple:ginkgo)(x,z,AUTUMN)}
+  // build: one instanced mesh per part, so a whole grove costs a few draw calls
+  const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),col=new THREE.Color(),sc=new THREE.Vector3();
+  const bark=new THREE.InstancedMesh(new THREE.CylinderGeometry(.8,1,1,7),mat('#3d302a',{roughness:1}),segs.length);
+  segs.forEach(([a,b,r],k)=>{const d=b.clone().sub(a),L=d.length();q.setFromUnitVectors(UP,d.normalize());m4.compose(a.clone().add(b).multiplyScalar(.5),q,sc.set(r,L,r));bark.setMatrixAt(k,m4)});
+  bark.castShadow=true;scene.add(bark);
+  // lumpy crown: a sphere nudged in and out by position, so shared edges stay closed and shading stays soft
+  const bg=new THREE.SphereGeometry(1,12,8),pa=bg.attributes.position,hv=(x,y,z)=>{const s=Math.sin(x*12.9898+y*78.233+z*37.719)*43758.5453;return s-Math.floor(s)};
+  for(let i=0;i<pa.count;i++){const x=pa.getX(i),y=pa.getY(i),z=pa.getZ(i),f=.82+.3*hv(Math.round(x*100)/100,Math.round(y*100)/100,Math.round(z*100)/100);pa.setXYZ(i,x*f,y*f,z*f)}
+  bg.computeVertexNormals();
+  const crowns=new THREE.InstancedMesh(bg,new THREE.MeshStandardMaterial({roughness:.95}),blobs.length);
+  blobs.forEach(([p,s,c],k)=>{q.setFromAxisAngle(UP,Math.random()*6.3);m4.compose(p,q,s);crowns.setMatrixAt(k,m4);crowns.setColorAt(k,col.set(blobs[k][2]).multiplyScalar(blobs[k][3]||.85))});
+  crowns.castShadow=true;scene.add(crowns);
+  // single leaves standing out from the crowns, so the edges read as leaves rather than balls
+  const e=new THREE.Euler();['maple','ginkgo'].forEach(kind=>{const L=cards[kind];if(!L.length)return;
+    const im=new THREE.InstancedMesh(new THREE.PlaneGeometry(.42,.42),LEAF_M[kind],L.length);
+    L.forEach(([p,c],k)=>{e.set(R(0,6.3),R(0,6.3),R(0,6.3));q.setFromEuler(e);m4.compose(p,q,sc.set(1,1,1).multiplyScalar(R(.8,1.2)));im.setMatrixAt(k,m4);im.setColorAt(k,col.set(c).multiplyScalar(R(.9,1.08)))});
+    scene.add(im)});
+})();
 
-/* ===== autumn: maples and oaks between the pines, leaves on the yard, a few drifting down ===== */
+/* ===== autumn: 단풍잎 and 은행잎 on the yard, a few drifting down ===== */
 const LEAF_COLS=['#b4502a','#c8702c','#d89a3c','#9a3a22','#c9a24a','#a8622a','#e0b552'];
-let falling=null;
+let falling=null,litter=null;
 if(AUTUMN){
   const rnd=(a,b)=>a+Math.random()*(b-a);
-  const crownGeo=new THREE.IcosahedronGeometry(1,3),tTrunk=mat('#4b382a',{roughness:1});
-  const crownMs=LEAF_COLS.map(c=>mat(c,{roughness:.95}));
-  const spots=[];for(let k=0;k<(LOW?14:24);k++){const side=k%2?1:-1;spots.push([side*rnd(9.5,26),rnd(-1,30)])}
-  spots.push([-7.5,9],[7.8,12.5],[-8.8,17],[8.5,19]);
-  spots.forEach(([x,z],k)=>{
-    const h=rnd(2.2,3.4),tr=new THREE.Mesh(new THREE.CylinderGeometry(.1,.16,h,6),tTrunk);tr.position.set(x,GROUND+h/2,z);tr.castShadow=true;scene.add(tr);
-    const n=3+Math.floor(Math.random()*3);for(let q=0;q<n;q++){const c=new THREE.Mesh(crownGeo,crownMs[(k+q)%crownMs.length]);
-      const r=rnd(.8,1.3);c.scale.set(r,r*.85,r);c.position.set(x+rnd(-.7,.7),GROUND+h+rnd(-.2,.7),z+rnd(-.7,.7));c.castShadow=true;scene.add(c)}});
-  // fallen leaves on the yard and the stepping-stone path
-  const leafGeo=new THREE.PlaneGeometry(.24,.16);leafGeo.rotateX(-Math.PI/2);
-  const N=LOW?500:1100,leafM=new THREE.MeshStandardMaterial({roughness:1,side:THREE.DoubleSide});
-  const ground=new THREE.InstancedMesh(leafGeo,leafM,N),m4=new THREE.Matrix4(),q4=new THREE.Quaternion(),e=new THREE.Euler(),col=new THREE.Color();
-  for(let k=0;k<N;k++){const near=k%3===0,x=near?rnd(-2.2,2.2):rnd(-9,9),z=near?rnd(5.4,15):rnd(5.4,22);e.set(rnd(-.15,.15),rnd(0,6.3),rnd(-.15,.15));q4.setFromEuler(e);const sc=rnd(.7,1.4);
-    m4.compose(new THREE.Vector3(x,GROUND+.012+Math.random()*.004,z),q4,new THREE.Vector3(sc,1,sc));ground.setMatrixAt(k,m4);ground.setColorAt(k,col.set(LEAF_COLS[k%LEAF_COLS.length]).multiplyScalar(rnd(.75,1)))}
-  scene.add(ground);
+  // fallen leaves: a thick litter over the yard, piled deeper in drifts and under the trees; feet kick them up as people walk
+  // a carpet of leaves painted underneath, feathered at the edges, so no bare ground shows between the loose ones
+  {const W=1024,c=document.createElement('canvas');c.width=c.height=W;const x=c.getContext('2d');
+    const tint=(img,colr)=>{const t=document.createElement('canvas');t.width=t.height=64;const y=t.getContext('2d');y.drawImage(img,0,0,64,64);y.globalCompositeOperation='source-in';y.fillStyle=colr;y.fillRect(0,0,64,64);return t};
+    const shade=(h,f)=>'#'+[1,3,5].map(i=>Math.min(255,Math.round(parseInt(h.substr(i,2),16)*f)).toString(16).padStart(2,'0')).join('');
+    const stamps=[];[[LEAF_TEX.maple.image,LITTER_MAPLE],[LEAF_TEX.ginkgo.image,LITTER_GINKGO]].forEach(([img,cols])=>cols.forEach(cl=>[.62,.78,.92].forEach(f=>stamps.push(tint(img,shade(cl,f))))));
+    x.fillStyle='#5e4430';x.fillRect(0,0,W,W);
+    for(let k=0;k<(LOW?7000:11000);k++){const st=stamps[Math.floor(Math.random()*stamps.length)],px=Math.random()*W,py=Math.random()*W,sz=10+Math.random()*10;
+      x.save();x.translate(px,py);x.rotate(Math.random()*6.3);x.drawImage(st,-sz/2,-sz/2,sz,sz);x.restore()}
+    // feather the edges into the grass
+    x.globalCompositeOperation='destination-in';const g=x.createRadialGradient(W/2,W/2,W*.3,W/2,W/2,W*.5);g.addColorStop(0,'rgba(0,0,0,1)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,W,W);
+    const tx=new THREE.CanvasTexture(c);tx.anisotropy=4;
+    const carpet=new THREE.Mesh(new THREE.PlaneGeometry(28,24),new THREE.MeshStandardMaterial({map:tx,transparent:true,roughness:1,depthWrite:false}));
+    carpet.rotation.x=-Math.PI/2;carpet.position.set(0,GROUND+.006,13.5);carpet.receiveShadow=true;carpet.renderOrder=-1;scene.add(carpet);}
+  const leafGeo=new THREE.PlaneGeometry(.32,.32);leafGeo.rotateX(-Math.PI/2);
+  const N=LOW?2400:5200,m4=new THREE.Matrix4(),q4=new THREE.Quaternion(),e=new THREE.Euler(),col=new THREE.Color(),pv=new THREE.Vector3(),sv=new THREE.Vector3();
+  const meshes=['maple','ginkgo'].map(kind=>{const m=new THREE.InstancedMesh(leafGeo,LEAF_M[kind],N/2);m.receiveShadow=true;scene.add(m);return m});
+  const heaps=[[-7.5,9,1.8],[7.8,12.5,1.8],[-8.8,17,1.8],[8.5,19,1.8],[-9.6,6,1.4],[9.8,7,1.4]];for(let k=0;k<(LOW?10:18);k++)heaps.push([rnd(-8.5,8.5),rnd(6,21.5),rnd(.6,1.3)]);
+  const LV=[],grid=new Map(),cell=(x,z)=>Math.floor(x)+','+Math.floor(z);
+  const put=l=>{const key=cell(l.x,l.z);let a=grid.get(key);if(!a)grid.set(key,a=[]);a.push(l);l.cell=key};
+  const draw=l=>{e.set(l.rx,l.ry,l.rz);q4.setFromEuler(e);m4.compose(pv.set(l.x,l.y,l.z),q4,sv.set(l.s,1,l.s));meshes[l.m].setMatrixAt(l.i,m4)};
+  for(let k=0;k<N;k++){const m=k&1,i=k>>1,cols=m?LITTER_GINKGO:LITTER_MAPLE;let x,z,y,tilt;
+    if(Math.random()<.45){const h=heaps[Math.floor(Math.random()*heaps.length)],a=rnd(0,6.3),d=Math.sqrt(Math.random())*h[2];x=h[0]+Math.cos(a)*d;z=h[1]+Math.sin(a)*d*.8;y=GROUND+.012+(1-d/h[2])*.11*Math.random();tilt=.5}
+    else{x=rnd(-9.8,9.8);z=rnd(5.35,22.6);y=GROUND+.012+Math.random()*.035;tilt=.28}
+    if(z<5.35)z=5.35;
+    const l={m,i,x,y,z,base:GROUND+.012,rx:rnd(-tilt,tilt),ry:rnd(0,6.3),rz:rnd(-tilt,tilt),s:rnd(.7,1.3),vx:0,vy:0,vz:0,live:false};
+    LV.push(l);put(l);draw(l);meshes[m].setColorAt(i,col.set(cols[k%cols.length]).multiplyScalar(rnd(.7,1)))}
+  const live=[],prevPos=new WeakMap();
+  // 바스락: a short, soft burst of filtered noise for your own steps only, very quiet, at most about three a second
+  let lastRustle=0,noiseBuf=null;
+  const rustle=()=>{const t=performance.now();if(t-lastRustle<320)return;lastRustle=t;const a=(typeof ac!=='undefined')&&ac;if(!a||a.state!=='running')return;
+    try{if(!noiseBuf){noiseBuf=a.createBuffer(1,Math.floor(a.sampleRate*.3),a.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(Math.random()<.35?1:.25)}
+      const src=a.createBufferSource();src.buffer=noiseBuf;src.playbackRate.value=.8+Math.random()*.45;
+      const bp=a.createBiquadFilter();bp.type='bandpass';bp.frequency.value=2600+Math.random()*1400;bp.Q.value=.8;
+      const g=a.createGain(),n=a.currentTime;g.gain.setValueAtTime(0,n);g.gain.linearRampToValueAtTime(.014,n+.012);g.gain.exponentialRampToValueAtTime(.0004,n+.2);
+      src.connect(bp).connect(g).connect(a.destination);src.start(n);src.stop(n+.25)}catch(e){}};
+  litter={tick(dt){
+    // every walker (you and everyone you can see) stirs the leaves around their feet
+    const walkers=[me,...others.values()];let myKick=false;
+    for(const w of walkers){const px=prevPos.get(w);prevPos.set(w,[w.x,w.z]);if(!px||w.z<5||(w.mode||w.pr&&w.pr.mode)==='sit')continue;
+      const dx=w.x-px[0],dz=w.z-px[1],sp=Math.hypot(dx,dz);if(sp<.003||sp>1)continue;
+      const fx=Math.floor(w.x),fz=Math.floor(w.z);
+      for(let gx=fx-1;gx<=fx+1;gx++)for(let gz=fz-1;gz<=fz+1;gz++){const a=grid.get(gx+','+gz);if(!a)continue;
+        for(const l of a){if(l.live)continue;const ox=l.x-w.x,oz=l.z-w.z,d=Math.hypot(ox,oz);if(d>.42||Math.random()>.35)continue;
+          if(w===me)myKick=true;const k=1/(d||1),f=rnd(.6,1.4);l.vx=ox*k*f+dx/dt*.18;l.vz=oz*k*f+dz/dt*.18;l.vy=rnd(.5,1.3);l.spin=[rnd(-6,6),rnd(-4,4),rnd(-6,6)];l.live=true;live.push(l)}}}
+    if(myKick)rustle();
+    if(!live.length)return;const touched=[false,false];
+    for(let k=live.length-1;k>=0;k--){const l=live[k];l.vy-=5.5*dt;l.x+=l.vx*dt;l.z+=l.vz*dt;l.y+=l.vy*dt;const drag=Math.pow(.25,dt);l.vx*=drag;l.vz*=drag;
+      l.rx+=l.spin[0]*dt;l.ry+=l.spin[1]*dt;l.rz+=l.spin[2]*dt;
+      if(l.z<5.35){l.z=5.35;l.vz=Math.abs(l.vz)*.3}
+      if(l.y<=l.base&&l.vy<0){l.y=l.base+Math.random()*.03;l.rx=rnd(-.3,.3);l.rz=rnd(-.3,.3);l.live=false;live.splice(k,1);
+        const a=grid.get(l.cell);if(a){const j=a.indexOf(l);if(j>=0)a.splice(j,1)}put(l)}
+      draw(l);touched[l.m]=true}
+    touched.forEach((t,m)=>{if(t)meshes[m].instanceMatrix.needsUpdate=true})}};
   // a handful drifting down, recycled
-  const F=LOW?24:48,fl=new THREE.InstancedMesh(new THREE.PlaneGeometry(.16,.11),new THREE.MeshStandardMaterial({roughness:1,side:THREE.DoubleSide}),F);
-  const st=[];for(let k=0;k<F;k++){st.push({x:rnd(-10,10),y:rnd(0,5),z:rnd(-3,20),ph:rnd(0,6.3),sp:rnd(.25,.5),sw:rnd(.3,.8)});fl.setColorAt(k,col.set(LEAF_COLS[k%LEAF_COLS.length]))}
-  scene.add(fl);
+  const F=LOW?24:48,H=F/2,fls=['maple','ginkgo'].map(kind=>new THREE.InstancedMesh(new THREE.PlaneGeometry(.24,.24),LEAF_M[kind],H));
+  const st=[];for(let k=0;k<F;k++){st.push({x:rnd(-10,10),y:rnd(0,5),z:rnd(-3,20),ph:rnd(0,6.3),sp:rnd(.25,.5),sw:rnd(.3,.8)});const ki=k<H?0:1,cols=ki?LITTER_GINKGO:LITTER_MAPLE;fls[ki].setColorAt(k%H,col.set(cols[k%cols.length]))}
+  fls.forEach(f=>scene.add(f));const fl={setMatrixAt:(k,m)=>fls[k<H?0:1].setMatrixAt(k%H,m),instanceMatrix:{set needsUpdate(v){fls.forEach(f=>f.instanceMatrix.needsUpdate=true)}}};
   falling={tick(dt,now){for(let k=0;k<F;k++){const o=st[k];o.y-=o.sp*dt;o.ph+=dt*1.6;
       const inside=Math.abs(o.x)<8&&o.z>-4.9&&o.z<4.9;if(o.y<(inside?.02:GROUND)||inside&&o.y<4.3&&o.y>4.25){o.y=rnd(4.6,6.5);o.x=rnd(-10,10);o.z=rnd(-3,20)}
       e.set(Math.sin(o.ph)*1.2,o.ph*.7,Math.cos(o.ph*1.3)*.9);q4.setFromEuler(e);
@@ -316,14 +441,11 @@ const headland=new THREE.Mesh(new THREE.SphereGeometry(1,48,28),mat('#232624',{r
 // the headland across the bay and the pine slopes: autumn colours too
 if(AUTUMN){
   headland.material=mat('#6a4428',{roughness:1});
-  const CR=['#b4502a','#c8702c','#d89a3c','#9a3a22','#c9a24a','#8c2f1e','#2f3d2c','#e0b552'];
-  const g=new THREE.IcosahedronGeometry(1,3),N=LOW?350:800,im=new THREE.InstancedMesh(g,new THREE.MeshStandardMaterial({roughness:1}),N);
-  const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),c=new THREE.Color(),v=new THREE.Vector3(),sc=new THREE.Vector3(),UPV3=new THREE.Vector3(0,1,0);let n=0;
-  for(let t=0;t<N*3&&n<N;t++){const a=Math.random()*Math.PI*2,b=Math.acos(Math.random()*.85+.15);
-    v.set(Math.cos(a)*Math.sin(b),Math.cos(b),Math.sin(a)*Math.sin(b)).multiply(headland.scale).add(headland.position);if(v.y<-6.5)continue;
-    const r=2.2+Math.random()*2.6;sc.set(r,r*(.7+Math.random()*.5),r);q.setFromAxisAngle(UPV3,Math.random()*6.3);m4.compose(v,q,sc);im.setMatrixAt(n,m4);
-    im.setColorAt(n,c.set(CR[Math.floor(Math.random()*CR.length)]).multiplyScalar(.8+Math.random()*.25));n++}
-  im.count=n;scene.add(im);
+  const spots=[],N=LOW?260:560;
+  for(let t=0;t<N*3&&spots.length<N;t++){const a=Math.random()*Math.PI*2,b=Math.acos(Math.random()*.85+.15);
+    const v=new THREE.Vector3(Math.cos(a)*Math.sin(b),Math.cos(b),Math.sin(a)*Math.sin(b)).multiply(headland.scale).add(headland.position);if(v.y<-6.5)continue;
+    v.y-=.5;spots.push({p:v,s:2.6+Math.random()*2.2})}
+  farTrees(spots,true);
   // about a third of the pines near the yard are swapped for turning trees' colours on their tips
   pineM.color.set('#33402d');
 }
@@ -889,6 +1011,7 @@ function frame(now){
   {const night=clamp((-.833-s.alt)/2.5,0,1);lampHeadM.emissiveIntensity=1.5*night;poolM.opacity=.5*night;gardenLights.forEach(l=>l.intensity=.9*night)}paperM.emissiveIntensity=.22*(1-day*.8);
 
   if(falling)falling.tick(dt,now);
+  if(litter)litter.tick(dt);
   if(dropped.length)tickDropped(dt,now);
   moveMe(dt);
   me.char.g.position.set(me.x,me.mode==='sit'&&me.seat!=null?seatPos[me.seat].y:floorAt(me.x,me.z),me.z);me.char.g.rotation.y=me.ry;
@@ -1097,7 +1220,7 @@ brewText();renderTags();
 /* ===== together, through Supabase Realtime: presence for who is here, broadcast for footsteps ===== */
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
-const APP_V='31';
+const APP_V='32';
 $('ver').textContent='v'+APP_V;
 function connectRoom(){
   // Presence only says who is here (tracked once per connection). Everything else rides broadcasts:
