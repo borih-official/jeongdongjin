@@ -498,13 +498,13 @@ function makeChar(color){
   const hair=new THREE.Mesh(new THREE.SphereGeometry(.25,28,20,0,Math.PI*2,0,Math.PI*.55),mat('#3a2f28',{roughness:.8}));hair.position.y=.21;hair.rotation.x=.35;torso.add(hair);
   const eyeM=mat('#2c2b28');[-1,1].forEach(s=>{const e=new THREE.Mesh(new THREE.SphereGeometry(.022,8,6),eyeM);e.position.set(s*.08,.2,-.225);e.scale.z=.5;headM.parent.add(e)});
   const cheekM=new THREE.MeshStandardMaterial({color:C('#e6a99a'),transparent:true,opacity:.55});[-1,1].forEach(s=>{const e=new THREE.Mesh(new THREE.SphereGeometry(.035,8,6),cheekM);e.position.set(s*.13,.13,-.2);e.scale.z=.3;torso.add(e)});
-  const leafM=mat('#7f9f6c',{roughness:.7});
+  const leafM=mat('#7f9f6c',{roughness:.7,side:THREE.DoubleSide});
   // the barley sprout: grows a little with every sip, and heads into an ear after many mornings
   const sprout=new THREE.Group();sprout.position.y=.44;torso.add(sprout);
   const stemGeo=new THREE.CylinderGeometry(.008,.011,1,6);stemGeo.translate(0,.5,0);
-  const stem=new THREE.Mesh(stemGeo,leafM);stem.scale.y=.12;sprout.add(stem);
+  const stem=new THREE.Mesh(stemGeo,leafM);sprout.add(stem);
   const leaves=[[-1,.6],[1,-.6]].map(([s,rz])=>{const p=new THREE.Group();p.rotation.z=rz;sprout.add(p);
-    const lf=new THREE.Mesh(new THREE.SphereGeometry(.05,12,8),leafM);lf.scale.set(1.5,.35,.7);lf.position.x=s*.06;p.add(lf);return p});
+    const lf=new THREE.Mesh(LEAF_GEO,leafM);lf.position.x=s*.075;lf.rotation.y=s>0?0:Math.PI;p.add(lf);return p});
   const ear=new THREE.Group();ear.visible=false;sprout.add(ear);
   const earM=mat('#c4b07a',{roughness:.6});
   // the ear: up to 16 grains in two rows with their awns; it fills one grain a sip and nods as it gets heavy
@@ -522,6 +522,9 @@ function makeChar(color){
   const c={g,torso,head:headM,hand,hold:0,arms,sprout:{stem,leaves,ear,leafM,grains,earM,n:-1},feet,sitBody,standBody,bob:Math.random()*6,walkPh:0,speed:0,pose:null};
   setPose(c,'stand');return c;
 }
+// a slender blade, widest a third of the way out, curving slightly, like the leaves on 🌾
+const LEAF_GEO=(()=>{const sh=new THREE.Shape();sh.moveTo(-.075,0);sh.quadraticCurveTo(-.035,.034,.075,.002);sh.quadraticCurveTo(-.035,-.012,-.075,0);
+  const g=new THREE.ShapeGeometry(sh,10);const pos=g.attributes.position;for(let k=0;k<pos.count;k++){const x=pos.getX(k),u=(x+.075)/.15;pos.setY(k,pos.getY(k)-u*u*.035);pos.setZ(k,Math.sin(u*Math.PI)*.006)}g.computeVertexNormals();return g})();
 const GRAIN_MAX=16,GRAIN_START=6,GRAIN_GEO=new THREE.SphereGeometry(.018,8,6),AWN_GEO=new THREE.CylinderGeometry(.002,.002,.06,4);
 const EAR_AT=10,EAR_CYCLE=GRAIN_MAX-GRAIN_START+1;   // ear at the 10th sip; one grain a sip; when it is full the grains drop and a new ear starts
 const dropped=[];   // grains lying on the floor: {m,v,y0,t}
@@ -537,19 +540,30 @@ function tickDropped(dt,now){for(let k=dropped.length-1;k>=0;k--){const d=droppe
     if(d.m.position.y<d.floor){d.m.position.y=d.floor;d.vy=-d.vy*.35;d.vx*=.6;d.vz*=.6;d.bounced++;if(d.bounced>=3){d.m.rotation.set(Math.PI/2,0,Math.random()*6)}}}
   if(now-d.born>150000){scene.remove(d.m);dropped.splice(k,1)}}}   // grains on the floor fade away after a couple of minutes
 function setSprout(c,n){
-  n=Math.max(0,Math.floor(+n||0));if(c.sprout.n===n)return;c.sprout.n=n;
-  // first sips: a short, fresh sprout with two leaves pointing up like a V; fully grown by the tenth sip, leaves opened and deeper green
-  const prev=c.sprout.n<0?null:earState(c.sprout.n),cur=earState(n);
+  n=Math.max(0,Math.floor(+n||0));if(c.sprout.n===n)return;
+  const prev=c.sprout.n<0?null:earState(c.sprout.n),cur=earState(n);c.sprout.n=n;
   if(prev&&cur.cycle>prev.cycle&&prev.g>0)dropGrains(c);   // the ear grew too heavy: 투둑
-  const t=Math.min(n,10)/10,h=.12+.14*t,up=1.15-.65*t,size=1+.7*t;
-  c.sprout.stem.scale.set(1+t*.3,h,1+t*.3);
-  c.sprout.leaves.forEach((p,k)=>{const s=k?1:-1;p.position.y=h*(k?.92:.84);p.rotation.z=s*up;p.scale.setScalar(size)});
-  c.sprout.leafM.color.setRGB(.65+(.44-.65)*t,.81+(.58-.81)*t,.49+(.38-.49)*t);
-  const sp=c.sprout,g=cur.g;sp.ear.visible=g>0;sp.ear.position.y=h;sp.ear.scale.setScalar(.85);
-  sp.grains.forEach((q,k)=>{q.visible=k<g;q.rotation.z=0});
-  const heavy=g>0?(g-GRAIN_START)/(GRAIN_MAX-GRAIN_START):0;
-  sp.ear.rotation.z=-heavy*1.9;sp.stem.rotation.z=-heavy*.35;sp.ear.position.x=Math.sin(-sp.stem.rotation.z)*h*.9;sp.ear.position.y=h*Math.cos(sp.stem.rotation.z);   // nodding like ripe barley
+  const t=Math.min(n,10)/10,sp=sp0(c),g=cur.g,heavy=g>0?(g-GRAIN_START)/(GRAIN_MAX-GRAIN_START):0;
+  const h=.12+.16*t+.03*heavy;
+  // the stalk is one smooth arc, like 🌾: upright as a sprout, bending further over as the ear fills
+  const bend=g>0?.35+heavy*1.75:0,pts=[],N=14;let x=0,y=0;
+  for(let k=0;k<=N;k++){const u=k/N,a=bend*Math.pow(u,1.6);if(k){x+=Math.sin(a)*h/N;y+=Math.cos(a)*h/N}pts.push(new THREE.Vector3(x,y,0))}
+  const curve=new THREE.CatmullRomCurve3(pts);sp.stem.geometry.dispose();sp.stem.geometry=new THREE.TubeGeometry(curve,16,.0075+.003*t,6,false);
+  // two long leaves from low on the stalk: a V of shoots at first, then long blades arching outward that keep lengthening as the ear ripens
+  const up=1.2-.75*t-.15*heavy,len=(.65+.7*t)*(1+.45*heavy);
+  sp.leaves.forEach((p,k)=>{const sgn=k?1:-1;p.position.set(0,h*(k?.3:.22),0);p.rotation.set(0,k?.25:-.25,sgn*up);p.scale.set(len,1,(.8+.5*t)*(1+.3*heavy))});
+  sp.leafM.color.setRGB(.65+(.44-.65)*t,.81+(.58-.81)*t,.49+(.38-.49)*t);
+  // grains sit along the last stretch of the arc, alternating sides, awns pointing on along the curve
+  sp.ear.visible=g>0;sp.ear.position.set(0,0,0);sp.ear.rotation.set(0,0,0);sp.ear.scale.setScalar(1);
+  const q=new THREE.Quaternion(),tg=new THREE.Vector3(),nrm=new THREE.Vector3(),UPV=new THREE.Vector3(0,1,0),Z=new THREE.Vector3(0,0,1);
+  sp.grains.forEach((gr,k)=>{gr.visible=k<g;if(!gr.visible)return;
+    const u=g<=1?1:.58+.42*(k/(g-1));curve.getPointAt(u,gr.position);curve.getTangentAt(u,tg);
+    nrm.crossVectors(tg,Z).normalize();gr.position.addScaledVector(nrm,(k%2?1:-1)*.011);
+    q.setFromUnitVectors(UPV,tg);gr.quaternion.copy(q);gr.scale.setScalar(.85+.15*Math.min(1,heavy*2))});
+  // the curved stalk tips toward the character's left like the emoji
+  sp.stem.parent.rotation.y=0;
 }
+function sp0(c){return c.sprout}
 function setPose(c,p){if(c.pose===p)return;c.pose=p;c.sitBody.visible=p==='sit';c.standBody.visible=p!=='sit'}
 const tmpV=new THREE.Vector3(),tmpD=new THREE.Vector3(),UPV=new THREE.Vector3(0,1,0);
 function setLimb(a,hand){
@@ -990,7 +1004,7 @@ brewText();renderTags();
 /* ===== together, through Supabase Realtime: presence for who is here, broadcast for footsteps ===== */
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
-const APP_V='18';
+const APP_V='19';
 $('ver').textContent='v'+APP_V;
 function connectRoom(){
   // Presence only says who is here (tracked once per connection). Everything else rides broadcasts:
