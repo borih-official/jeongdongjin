@@ -167,7 +167,7 @@ body.cha .greets,body.cha .say,body.cha .mine,body.cha .labels,body.cha .side,bo
         <button class="btn" id="sip" disabled>한 모금</button>
         <button class="btn" id="cha" aria-pressed="false" disabled>차멍</button>
         <button class="btn" id="stand" hidden>일어나기</button>
-        <button class="btn" id="waves" aria-pressed="false">파도 소리</button>
+        <button class="btn" id="waves" aria-pressed="false">명상 음악</button>
       </div>
       <div class="mine"><span id="brewMsg">마당에 도착했어요</span></div>
       <div class="teas" id="tea" role="radiogroup" aria-label="오늘의 차"></div>
@@ -504,11 +504,11 @@ const seats=seatPos.map((p,i)=>{
   const l2=new THREE.Mesh(new THREE.BoxGeometry(.84,.006,.42),linen2M);l2.position.set(0,.243,0);tb.add(l2);
   const l1=new THREE.Mesh(new THREE.BoxGeometry(.66,.006,.32),linenM);l1.position.set(0,.248,.02);tb.add(l1);
   // left to right: 보듬이, 숙우, 다관 — both handles point to the right hand
-  const cup=makeBodeumi(BOWLS[i%BOWLS.length]);cup.position.set(-.25,.251,.08);tb.add(cup);
-  const pit=makePitcher();pit.position.set(.0,.251,-.05);tb.add(pit);
-  const tp=makeTeapot();tp.position.set(.2,.251,-.06);tb.add(tp);
-  const tm=makeTumbler();tm.position.set(.34,.251,.12);tb.add(tm);
-  const cd=makeCaddy();cd.position.set(.08,.251,.15);tb.add(cd);cd.userData.rest=cd.position.clone();
+  const cup=makeBodeumi(BOWLS[i%BOWLS.length]);cup.position.set(0,.251,.1);tb.add(cup);
+  const pit=makePitcher();pit.position.set(-.19,.251,-.09);tb.add(pit);
+  const tp=makeTeapot();tp.position.set(.2,.251,-.09);tb.add(tp);
+  const tm=makeTumbler();tm.position.set(.34,.251,.11);tb.add(tm);
+  const cd=makeCaddy();cd.position.set(0,.251,-.15);tb.add(cd);cd.userData.rest=cd.position.clone();
   // a few curled leaves that tumble from the caddy into the 다관
   const bits=new THREE.InstancedMesh(new THREE.BoxGeometry(.02,.005,.011),leafBitM,22);bits.visible=false;scene.add(bits);
   tp.userData.rest=tp.position.clone();pit.userData.rest=pit.position.clone();tm.userData.rest=tm.position.clone();
@@ -1001,29 +1001,35 @@ function chime(){
   try{navigator.vibrate&&navigator.vibrate([60,80,60])}catch(e){}
   if(document.hidden){const t0=document.title;let n=0;const iv=setInterval(()=>{document.title=n++%2?t0:'🍵 차가 우러났어요';if(n>12||!document.hidden){clearInterval(iv);document.title=t0}},900)}
   const a=ac;if(!a||a.state!=='running')return;[523.25,784].forEach((f,i)=>{const o=a.createOscillator(),g=a.createGain(),t0=a.currentTime+i*.18;o.frequency.value=f;g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(.1,t0+.02);g.gain.exponentialRampToValueAtTime(.0001,t0+2.4);o.connect(g).connect(a.destination);o.start(t0);o.stop(t0+2.5)})}
-// gentle shore, played as a media track (an <audio> loop) so it sounds even when the phone's ringer is on silent.
+// meditation music, played as a media track (an <audio> loop) so it sounds even when the phone's ringer is on silent.
 // The loop is rendered once in the browser: slow, low swells with long quiet gaps, then crossfaded so it repeats seamlessly.
 let wavesOn=false,waveAudio=null,waveRendering=null,readyUrl=null;
 try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}
 async function renderWaves(){
-  const SR=22050,LEN=48,O=window.OfflineAudioContext||window.webkitOfflineAudioContext;if(!O)return null;
-  const oc=new O(2,SR*LEN,SR);
+  const SR=22050,LEN=64,O=window.OfflineAudioContext||window.webkitOfflineAudioContext;if(!O)return null;
+  const oc=new O(2,SR*LEN,SR),hz=m=>440*Math.pow(2,(m-69)/12);
+  const master=oc.createGain();master.gain.value=.9;master.connect(oc.destination);
+  // pad: Dadd9 · Bm7 · Gmaj7 · Asus, 16 s each, slowly crossfading
+  const padBus=oc.createBiquadFilter();padBus.type='lowpass';padBus.frequency.value=1400;const padG=oc.createGain();padG.gain.value=.55;padBus.connect(padG).connect(master);
+  const CH=[[50,57,64,66],[47,54,62,69],[43,50,59,66],[45,52,59,62],[50,57,64,66]];
+  CH.forEach((ch,ci)=>{const c0=ci*16-4;ch.forEach(m=>[-.15,.15].forEach((det,di)=>{
+    const o=oc.createOscillator();o.type='sine';o.frequency.value=hz(m)+det;const o2=oc.createOscillator();o2.type='sine';o2.frequency.value=2*(hz(m)+det);
+    const g=oc.createGain(),g2=oc.createGain();g2.gain.value=.18;o2.connect(g2).connect(g);o.connect(g);
+    const pn=oc.createStereoPanner?oc.createStereoPanner():null;if(pn){pn.pan.value=di?.25:-.25;g.connect(pn).connect(padBus)}else g.connect(padBus);
+    const a=Math.max(0,c0),pk=c0+8,e=c0+20;g.gain.setValueAtTime(0,a);g.gain.linearRampToValueAtTime(.06,Math.max(a+.01,pk));g.gain.linearRampToValueAtTime(0,Math.min(LEN,e));
+    o.start(a);o2.start(a);o.stop(Math.min(LEN,e));o2.stop(Math.min(LEN,e))}))});
+  // singing bowl: inharmonic partials with a gentle beating decay
+  [3.5,21,38.5,55].forEach(t0=>{[[1,1,6],[2.71,.45,3.5],[5.15,.18,2]].forEach(([r,amp,dec])=>{
+    const o=oc.createOscillator();o.frequency.value=hz(74)*r;const g=oc.createGain();g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(.16*amp,t0+.01);g.gain.setTargetAtTime(0,t0+.01,dec);
+    const trem=oc.createOscillator(),tg=oc.createGain();trem.frequency.value=1.3;tg.gain.value=.04*amp;trem.connect(tg).connect(g.gain);
+    o.connect(g).connect(master);o.start(t0);trem.start(t0);o.stop(Math.min(LEN,t0+12));trem.stop(Math.min(LEN,t0+12))})});
+  // very far sea: band-limited, no rumble, quiet swells
   const nb=oc.createBuffer(1,SR*4,SR),d=nb.getChannelData(0);let b0=0,b1=0,b2=0;
-  for(let k=0;k<d.length;k++){const w=Math.random()*2-1;b0=.99765*b0+w*.099;b1=.963*b1+w*.2965;b2=.57*b2+w*1.0526;d[k]=(b0+b1+b2+w*.18)*.11} // soft pink noise
-  const master=oc.createGain();master.gain.value=.9;const lp=oc.createBiquadFilter();lp.type='lowpass';lp.frequency.value=900;master.connect(lp).connect(oc.destination);
-  // a low steady wash under everything, like the sea further out
-  {const s=oc.createBufferSource();s.buffer=nb;s.loop=true;const f=oc.createBiquadFilter();f.type='lowpass';f.frequency.value=260;const g=oc.createGain();g.gain.value=.2;s.connect(f).connect(g).connect(master);s.start()}
-  let t=.5;
-  while(t<LEN-4){
-    const rise=3+Math.random()*1.6,fall=6+Math.random()*3,peak=.9+Math.random()*.5,pan=Math.random()*.8-.4;
-    const s=oc.createBufferSource();s.buffer=nb;s.loop=true;s.playbackRate.value=.85+Math.random()*.2;
-    const f=oc.createBiquadFilter();f.type='lowpass';f.Q.value=.3;f.frequency.setValueAtTime(220,t);f.frequency.linearRampToValueAtTime(650+Math.random()*250,t+rise);f.frequency.setTargetAtTime(230,t+rise,fall/3);
-    const g=oc.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(peak*.35,t+rise*.6);g.gain.linearRampToValueAtTime(peak,t+rise);g.gain.setTargetAtTime(0,t+rise,fall/3.2);
-    const pn=oc.createStereoPanner?oc.createStereoPanner():null;
-    s.connect(f).connect(g);if(pn){pn.pan.value=pan;g.connect(pn).connect(master)}else g.connect(master);
-    s.start(t,Math.random()*3);s.stop(t+rise+fall+.1);
-    t+=rise+fall*.35+Math.random()*2.2;   // the next wave arrives as the last one is still washing out
-  }
+  for(let k=0;k<d.length;k++){const w=Math.random()*2-1;b0=.99765*b0+w*.099;b1=.963*b1+w*.2965;b2=.57*b2+w*1.0526;d[k]=(b0+b1+b2+w*.18)*.11}
+  const sea=oc.createBufferSource();sea.buffer=nb;sea.loop=true;const hp=oc.createBiquadFilter();hp.type='highpass';hp.frequency.value=180;const lp=oc.createBiquadFilter();lp.type='lowpass';lp.frequency.value=900;
+  const sg=oc.createGain();sg.gain.value=.012;sea.connect(hp).connect(lp).connect(sg).connect(master);sea.start(0);
+  let t=1;while(t<LEN){const rise=3+Math.random()*1.5,fall=5+Math.random()*2,pk=.035+Math.random()*.02;
+    sg.gain.setValueAtTime(.012,t);sg.gain.linearRampToValueAtTime(pk,t+rise);sg.gain.setTargetAtTime(.012,t+rise,fall/3);t+=rise+fall*.5+1+Math.random()*2}
   const buf=await oc.startRendering();
   {let pk=0;for(let ch=0;ch<2;ch++){const a=buf.getChannelData(ch);for(let k=0;k<a.length;k++)pk=Math.max(pk,Math.abs(a[k]))}const g=pk>0?.5/pk:1;for(let ch=0;ch<2;ch++){const a=buf.getChannelData(ch);for(let k=0;k<a.length;k++)a[k]*=g}}   // gentle, even level
   // crossfade the last 4 s into the first 4 s so the loop has no seam
@@ -1079,7 +1085,7 @@ brewText();renderTags();
 /* ===== together, through Supabase Realtime: presence for who is here, broadcast for footsteps ===== */
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
-const APP_V='29';
+const APP_V='30';
 $('ver').textContent='v'+APP_V;
 function connectRoom(){
   // Presence only says who is here (tracked once per connection). Everything else rides broadcasts:
