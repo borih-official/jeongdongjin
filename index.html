@@ -29,7 +29,7 @@ html,body{height:100%;overflow:hidden}
 body{background:#0d1520;color:var(--ink);font-family:var(--f-ko);font-weight:300;letter-spacing:.03em;-webkit-user-select:none;user-select:none}
 #gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
 .hud{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;
-  padding-top:calc(env(safe-area-inset-top,0px) + 14px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 14px);
+  padding-top:calc(env(safe-area-inset-top,0px) + 14px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + var(--vb,0px) + 14px);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;text-shadow:0 1px 10px rgba(0,0,0,.45)}
 .logo{font-family:var(--f-brand);font-weight:500;letter-spacing:.2em;font-size:14px}
@@ -45,9 +45,23 @@ body{background:#0d1520;color:var(--ink);font-family:var(--f-ko);font-weight:300
 
 .bottom{display:grid;gap:10px;justify-items:center}
 .bottom > *{pointer-events:auto}
-.greets{width:min(560px,100%);display:grid;gap:6px;max-height:24vh;overflow:auto}
+.greets{width:min(560px,100%);display:grid;gap:5px;max-height:18vh;overflow:auto;justify-items:start}
+.greets.open{max-height:30vh;pointer-events:auto}
+.greets .g{width:100%}
+.gmore{pointer-events:auto;font-family:var(--f-ui);font-size:11.5px;color:var(--ink-mid);background:var(--glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:999px;padding:4px 11px;cursor:pointer}
 .greets:empty{display:none}
-.g{display:flex;gap:8px;align-items:baseline;background:var(--glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:14px;padding:7px 12px;font-size:13px;line-height:1.6;min-width:0}
+/* overlays stop above an in-app browser's toolbar */
+.gate,.gb,.shot{bottom:var(--vb,0px)!important}
+.more{font-family:var(--f-ui);font-size:11.5px;color:var(--ink-mid)}
+.more summary{list-style:none;cursor:pointer;padding:2px 4px;text-align:center;opacity:.8}
+.more summary::-webkit-details-marker{display:none}
+.more summary::after{content:' ▾'}.more[open] summary::after{content:' ▴'}
+.more[open]{display:grid;gap:6px}
+/* short screens (a phone with the browser bars showing): tighter panel so nothing is cut off */
+@media (max-height:700px){.bar{gap:6px;padding:8px 9px}.acts .btn{padding:6px 11px;font-size:12.5px}.say input{padding:9px 12px}.greets{max-height:13vh}.mine{font-size:11.5px}.teas .tea{padding-top:5px;padding-bottom:5px}}
+.inapp-note{background:rgba(196,176,122,.16);border-radius:12px;padding:10px 12px;color:var(--ink)}
+.inapp-note .btn{display:block;margin:8px auto 0;font-size:13px}
+.g{display:flex;gap:8px;align-items:baseline;background:var(--glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:12px;padding:5px 11px;font-size:12.5px;line-height:1.55;min-width:0;opacity:.92}
 .g b{font-weight:500;white-space:nowrap;font-size:12px;color:var(--barley)}
 .g span{min-width:0;overflow-wrap:anywhere}
 .sitbtn{font-family:var(--f-ko);font-size:15px;color:var(--text);background:var(--paper);border:0;border-radius:999px;padding:12px 24px;cursor:pointer;box-shadow:0 6px 24px rgba(0,0,0,.3);animation:rise .35s ease-out}
@@ -198,6 +212,7 @@ body.cha .greets,body.cha .say,body.cha .mine,body.cha .labels,body.cha .side,bo
     <p>정동진 보리 차실에 오신 걸 환영해요.<br>차실에서 불릴 이름을 알려주세요.</p>
     <p class="fine">이름과 걷는 모습, 남긴 메시지는 지금 차실에 있는 모든 분에게 보여요.<br>창을 닫으면 차실에서 나가요.</p>
     <p class="fine keep-fine"><b>같은 기기, 같은 브라우저로 다시 오면 기록이 이어져요.</b><br>사파리로 시작했다면 다음에도 사파리로 열어 주세요.<br>카카오톡·인스타그램 안이나 시크릿 모드에서는 새로 시작돼요.<br>홈 화면에 추가해 두면 다시 오기 쉬워요.</p>
+    <p class="fine inapp-note" id="inappNote" hidden></p>
     <input id="nick" maxlength="12" autocomplete="nickname" placeholder="예: 보리" aria-label="이름">
     <button class="btn main" type="submit">차실로 들어가기</button>
   </form>
@@ -270,8 +285,10 @@ body.cha .greets,body.cha .say,body.cha .mine,body.cha .labels,body.cha .side,bo
       <div class="mine"><span id="brewMsg">마당에 도착했어요</span></div>
       <div class="teas" id="tea" role="radiogroup" aria-label="오늘의 차"></div>
       <div class="brewbar"><i id="brewbar"></i></div>
+      <details class="more" id="moreSet"><summary>화면 설정 · 하루 미리보기 · 가볍게 보기</summary>
       <div class="pvrow"><label><input type="checkbox" id="pvOn"> 하루 미리보기</label><input type="range" id="pv" min="0" max="100" value="8" aria-label="미리보기 시각"><b id="pvT">--:--</b></div>
       <div class="pvrow"><label><input type="checkbox" id="liteOn"> 가볍게 보기</label><span class="lite-note">버벅일 때 켜 주세요</span></div>
+      </details>
       <div class="solo" id="solo" hidden>지금은 차실에 연결하지 못해 혼자 보는 화면이에요. 잠시 뒤 다시 들어와 주세요.</div>
     </div>
   </div>
@@ -282,6 +299,10 @@ body.cha .greets,body.cha .say,body.cha .mine,body.cha .labels,body.cha .side,bo
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>window.supabase||document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"><\/script>')</script>
 <script>
+// opened inside an app (KakaoTalk, Instagram …): its toolbar covers the bottom of the page and records do not carry over
+const IN_APP=/KAKAOTALK|Instagram|FBAN|FBAV|NAVER|Line\//i.test(navigator.userAgent),KAKAO=/KAKAOTALK/i.test(navigator.userAgent),KAKAO_BAR=56;
+const openOutside=()=>{location.href='kakaotalk://web/openExternal?url='+encodeURIComponent(location.href.split('#')[0])};
+if(KAKAO){try{if(!sessionStorage.getItem('bm.ext')){sessionStorage.setItem('bm.ext','1');setTimeout(openOutside,300)}}catch(e){}}
 (()=>{
 const $=id=>document.getElementById(id);
 const notice=t=>{document.body.insertAdjacentHTML('beforeend','<div class="nogl">'+t+'</div>')};
@@ -1209,16 +1230,26 @@ function renderTags(){
   }
 }
 setInterval(renderTags,500);
+const GREET_SHOW_MS=60000;let greetsOpen=false,greetsTimer=null;
 function renderGreets(){
   const list=[];if(me.greet)list.push({n:'나',g:me.greet,at:me.greetAt});
   for(const o of others.values())if(o.pr.greet)list.push({n:nameOfOther(o),g:o.pr.greet,at:+o.pr.greetAt||0});
   list.sort((a,b)=>a.at-b.at);
-  $('greets').innerHTML=list.map(x=>`<div class="g"><b>${esc(x.n)}</b><span>${esc(String(x.g).slice(0,60))}</span></div>`).join('');$('greets').scrollTop=1e6;
+  // keep the room in view: only the two newest messages, and only for a minute; the rest fold into '지난 대화'
+  const now=Date.now(),fresh=list.filter(x=>now-x.at<GREET_SHOW_MS).slice(-2),shown=greetsOpen?list:fresh,rest=list.length-shown.length;
+  const row=x=>`<div class="g"><b>${esc(x.n)}</b><span>${esc(String(x.g).slice(0,60))}</span></div>`;
+  const more=list.length&&(rest>0||greetsOpen)?`<button class="gmore" type="button" id="gMore">${greetsOpen?'대화 접기':`지난 대화 ${rest}`}</button>`:'';
+  const h=more+shown.map(row).join('');if($('greets')._h!==h){$('greets').innerHTML=h;$('greets')._h=h;$('greets').scrollTop=1e6}
+  $('greets').classList.toggle('open',greetsOpen);
 }
+$('greets').addEventListener('click',e=>{if(!e.target.closest('#gMore'))return;greetsOpen=!greetsOpen;clearTimeout(greetsTimer);if(greetsOpen)greetsTimer=setTimeout(()=>{greetsOpen=false;renderGreets()},20000);renderGreets()});
+setInterval(renderGreets,3000);
 
 /* ===== camera follows me ===== */
-function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);cam.aspect=w/h;cam.fov=w/h<.8?62:50;cam.updateProjectionMatrix()}
-addEventListener('resize',resize);resize();
+// the part of the page hidden under a browser's toolbar (KakaoTalk, Instagram …): keep the bottom panel above it
+function fitView(){const vv=window.visualViewport,h=vv?vv.height+vv.offsetTop:innerHeight,m=Math.max(0,Math.round(innerHeight-h)),cut=KAKAO&&m<20?KAKAO_BAR:m;document.documentElement.style.setProperty('--vb',cut+'px')}
+function resize(){fitView();const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);cam.aspect=w/h;cam.fov=w/h<.8?62:50;cam.updateProjectionMatrix()}
+addEventListener('resize',resize);resize();try{visualViewport.addEventListener('resize',fitView)}catch(e){}
 const tgt=new THREE.Vector3();
 function updateCam(){
   camS.th=angLerp(camS.th,camT.th,.12);camS.el+=(camT.el-camS.el)*.12;camS.r+=(camT.r-camS.r)*.12;
@@ -1550,7 +1581,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('shot').hidden)closeShot(
 // the photo file is made ready as soon as the photo is taken, so the tap goes straight to the share sheet (phones require that)
 let shotFile=null;
 const closeShot=()=>{$('shot').hidden=true};
-const IN_APP=/KAKAOTALK|Instagram|FBAN|FBAV|NAVER|Line\//i.test(navigator.userAgent);
+
 function prepShotFile(){const d=kst(Date.now()),p2=n=>String(n).padStart(2,'0');
   const name=`borih-morning-${d.getUTCFullYear()}${p2(d.getUTCMonth()+1)}${p2(d.getUTCDate())}-${p2(d.getUTCHours())}${p2(d.getUTCMinutes())}.jpg`;
   try{shotFile=new File([shotBlob],name,{type:'image/jpeg'})}catch(e){shotFile=null}
@@ -1689,14 +1720,15 @@ const bottomEl=document.querySelector('.bottom'),barEl=$('bar'),PEEK=26;
 let sheetDown=false,sheetDrag=null;
 const sheetMax=()=>Math.max(0,barEl.offsetHeight-PEEK);
 function applySheet(extra=0,anim=true){bottomEl.style.transition=anim?'transform .38s cubic-bezier(.2,.8,.2,1)':'none';bottomEl.style.transform=`translateY(${clamp((sheetDown?sheetMax():0)+extra,0,sheetMax())}px)`}
-barEl.addEventListener('pointerdown',e=>{if(e.target.closest('input,button,select,label,form'))return;sheetDrag={y:e.clientY,t:performance.now()};try{barEl.setPointerCapture(e.pointerId)}catch(_){}});
+barEl.addEventListener('pointerdown',e=>{if(e.target.closest('input,button,select,label,form,summary,details'))return;sheetDrag={y:e.clientY,t:performance.now()};try{barEl.setPointerCapture(e.pointerId)}catch(_){}});
 barEl.addEventListener('pointermove',e=>{if(sheetDrag)applySheet(e.clientY-sheetDrag.y,false)});
 const sheetEnd=e=>{if(!sheetDrag)return;const dy=e.clientY-sheetDrag.y,fast=Math.abs(dy)/(performance.now()-sheetDrag.t+1)>.5;sheetDrag=null;
   if(Math.abs(dy)<6)sheetDown=!sheetDown;else if(fast)sheetDown=dy>0;else sheetDown=(sheetDown?sheetMax():0)+dy>sheetMax()/2;
   if(sheetDown)document.activeElement&&document.activeElement.blur&&document.activeElement.blur();applySheet()};
 barEl.addEventListener('pointerup',sheetEnd);barEl.addEventListener('pointercancel',sheetEnd);
 addEventListener('resize',()=>applySheet(0,false));
-if(innerHeight<520)sheetDown=true;   // phone held sideways: start with the panel tucked away
+if(innerHeight<520&&innerWidth>innerHeight)sheetDown=true;
+if(IN_APP){const n=$('inappNote');n.hidden=false;n.innerHTML=KAKAO?'카카오톡 안에서는 화면 아래가 가려지고 기록이 이어지지 않아요.<button class="btn main" type="button" id="goOut">사파리(기본 브라우저)로 열기</button>':'이 앱 안에서는 화면 아래가 가려지고 기록이 이어지지 않아요.<br>오른쪽 위 메뉴(··· )에서 <b>브라우저로 열기</b>를 눌러 주세요.';const g=$('goOut');if(g)g.onclick=openOutside}   // phone held sideways: start with the panel tucked away
 requestAnimationFrame(()=>applySheet(0,false));
 
 /* ===== arrive in the yard, facing the door ===== */
@@ -1707,7 +1739,7 @@ let sbOne=null;function sbClient(){if(sbOne)return sbOne;if(!window.supabase)ret
   try{sbOne=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},realtime:{params:{eventsPerSecond:10}}})}catch(e){sbOne=null}return sbOne}
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
-const APP_V='74';
+const APP_V='77';
 $('ver').textContent='v'+APP_V;
 function connectRoom(){
   // Presence only says who is here (tracked once per connection). Everything else rides broadcasts:
