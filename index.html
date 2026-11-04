@@ -169,8 +169,8 @@ body.cha .greets,body.cha .say,body.cha .mine,body.cha .labels,body.cha .side,bo
 .rk-total{font-family:var(--f-brand);font-weight:300;font-size:40px;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
 .rk-total small{font-family:var(--f-ko);font-size:14px;color:var(--ink-mid);margin-left:4px}
 .rk-list{list-style:none;margin:0;padding:0;overflow-y:auto;display:grid;gap:2px}
-.rk-list li{display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center;padding:9px 4px;border-top:1px solid rgba(243,239,230,.08);font-size:14px;min-width:0}
-.rk-list .no{font-family:var(--f-brand);color:var(--ink-mid);text-align:center}.rk-list li:nth-child(-n+3) .no{color:var(--barley)}
+.rk-list li{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:9px 4px;border-top:1px solid rgba(243,239,230,.08);font-size:14px;min-width:0}
+.rk-head{color:var(--ink);font-size:14px}.rk-head span{font-family:var(--f-ui);font-size:12px;color:var(--ink-mid);margin-left:6px}
 .rk-list .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}.rk-list .me .nm{color:var(--barley)}
 .rk-list .c{font-family:var(--f-brand);font-variant-numeric:tabular-nums;color:var(--ink)}
 </style>
@@ -206,9 +206,9 @@ body.cha .greets,body.cha .say,body.cha .mine,body.cha .labels,body.cha .side,bo
     <div class="gb-head"><div><div class="logo">함께 마신 차</div><div class="gb-sub">정동진 보리 차실에서 보듬이에 따른 잔</div></div><button class="btn" id="rkClose" type="button">닫기</button></div>
     <div class="rk-total"><span id="rkTotal">0</span><small>잔</small></div>
     <div class="gb-mine" id="rkMine"></div>
-    <div class="gb-sub">가장 많이 마신 분</div>
+    <div class="gb-sub rk-head">오늘의 차벗 <span id="rkToday"></span></div>
     <ol class="rk-list" id="rkList"></ol>
-    <p class="gb-note">같은 이름은 함께 세어요 · 1분마다 새로 고쳐져요</p>
+    <p class="gb-note">오늘(한국 시간) 찻잔이 많은 차벗부터 보여요 · 같은 이름은 함께 세어요</p>
   </div></div>
   <div class="gb" id="gb" hidden><div class="gb-card" role="dialog" aria-label="찻잎 매듭 방명록">
     <div class="gb-head"><div><div class="logo">찻잎 매듭</div><div class="gb-sub">정동진 보리 차실 방명록 · 차실 앞 나무에 걸려요</div></div><button class="btn" id="gbClose" type="button">닫기</button></div>
@@ -471,7 +471,10 @@ const knotTree=(()=>{const g=new THREE.Group();g.position.set(KNOT_TREE.x,GROUND
   // each knot: a short string, a paper strip in the writer's robe colour, a small tea leaf at the top
   const strings=new THREE.InstancedMesh(new THREE.BoxGeometry(.006,.14,.006),mat('#d9cdb4',{roughness:1}),KNOT_MAX);
   const strips=new THREE.InstancedMesh(new THREE.PlaneGeometry(.075,.22),new THREE.MeshStandardMaterial({roughness:.9,side:THREE.DoubleSide}),KNOT_MAX);
-  const leaves=new THREE.InstancedMesh(new THREE.PlaneGeometry(.08,.08),LEAF_M.maple,KNOT_MAX);
+  // its own copy of the leaf material, with colours ready from the start: a shared material first drawn without per-leaf colours
+  // keeps drawing every maple leaf white (three.js r128 does not rebuild it), which turned the autumn trees white
+  const leaves=new THREE.InstancedMesh(new THREE.PlaneGeometry(.08,.08),LEAF_M.maple.clone(),KNOT_MAX);
+  for(let k=0;k<KNOT_MAX;k++){strips.setColorAt(k,C('#e8dfc8'));leaves.setColorAt(k,C('#6f8f4e'))}
   [strings,strips,leaves].forEach(m=>{m.count=0;g.add(m)});
   const hang=[];for(let k=0;k<KNOT_MAX;k++){const [b0,b1]=branches[k%5],f=.3+.65*(((k/5|0)*.618)%1);hang.push({p:b0.clone().lerp(b1,f),ph:k*1.7,ry:(k*2.39)%6.28})}
   const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),pv=new THREE.Vector3(),one=new THREE.Vector3(1,1,1),col=new THREE.Color();
@@ -1299,12 +1302,12 @@ $('gbHow').onclick=()=>{closeGb();showKeep()};
 document.body.appendChild($('gb'));document.body.appendChild($('knotTip'));
 
 /* ===== 함께 마신 차: every cup poured is counted in Supabase (cup_log), totals come from cup_stats() ===== */
-let cupStats={total:0,top:[]},cupsAt=0,cupTimer=null;
+let cupStats={total:0,today:0,top:[]},cupsAt=0,cupTimer=null;
 function showCups(){$('cupTotal').textContent=cupStats.total.toLocaleString('ko-KR');$('cupChip').hidden=false;if(!$('rk').hidden)renderRank()}
 async function loadCups(){const c=gbClient();if(!c)return;cupsAt=Date.now();
   try{const {data,error}=await c.rpc('cup_stats',{p_place:PLACE});if(error||!data)return;
     const top=Array.isArray(data.top)?data.top.map(r=>({name:cleanText(String(r&&r.name||''),12).trim()||'손님',cups:Math.max(0,+r.cups|0)})).slice(0,10):[];
-    cupStats={total:Math.max(0,+data.total|0),top};showCups()}catch(e){}}
+    cupStats={total:Math.max(0,+data.total|0),today:Math.max(0,+data.today|0),top};showCups()}catch(e){}}
 function cupsChanged(){cupStats.total++;showCups();if(cupTimer)return;cupTimer=setTimeout(()=>{cupTimer=null;loadCups()},Math.max(3000,10000-(Date.now()-cupsAt)))}
 async function pourCup(tea){cupStats.total++;showCups();const c=gbClient();if(!c)return;
   const device=String(store.get('id')||'').replace(/[^A-Za-z0-9_-]/g,'').slice(0,40);if(device.length<6)return;
@@ -1313,7 +1316,9 @@ setInterval(()=>{if(document.visibilityState==='visible'&&Date.now()-cupsAt>5500
 function renderRank(){$('rkTotal').textContent=cupStats.total.toLocaleString('ko-KR');
   const mine=TEAS.reduce((a,t)=>a+(+REC.cups[t.k]||0),0),myName=(me.name||'').trim();
   $('rkMine').innerHTML=`<b>${esc(myName||'손님')}</b> · 이 기기에서 마신 차 ${mine}잔`;
-  $('rkList').innerHTML=cupStats.top.length?cupStats.top.map((r,i)=>`<li class="${r.name===myName?'me':''}"><span class="no">${i+1}</span><span class="nm">${esc(r.name)}</span><span class="c">${r.cups.toLocaleString('ko-KR')}잔</span></li>`).join(''):'<li class="gb-empty" style="display:block">아직 아무도 차를 따르지 않았어요. 첫 잔을 따라 주세요.</li>'}
+  $('rkToday').textContent=cupStats.today?`오늘 ${cupStats.today.toLocaleString('ko-KR')}잔`:'';
+  // 오늘의 차벗: today's cups, most first, no ranks or numbers
+  $('rkList').innerHTML=cupStats.top.length?cupStats.top.map(r=>`<li class="${r.name===myName?'me':''}"><span class="nm">${esc(r.name)}</span><span class="c">${r.cups.toLocaleString('ko-KR')}잔</span></li>`).join(''):'<li class="gb-empty" style="display:block">오늘은 아직 아무도 차를 따르지 않았어요. 첫 잔을 따라 주세요.</li>'}
 $('cupChip').onclick=()=>{renderRank();$('rk').hidden=false;loadCups()};
 $('rkClose').onclick=()=>{$('rk').hidden=true};
 $('rk').addEventListener('click',e=>{if(e.target.id==='rk')$('rk').hidden=true});
@@ -1536,7 +1541,7 @@ brewText();renderTags();
 /* ===== together, through Supabase Realtime: presence for who is here, broadcast for footsteps ===== */
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
-const APP_V='45';
+const APP_V='47';
 $('ver').textContent='v'+APP_V;
 function connectRoom(){
   // Presence only says who is here (tracked once per connection). Everything else rides broadcasts:
