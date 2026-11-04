@@ -7,6 +7,10 @@
 <meta property="og:title" content="보리 모닝 차실">
 <meta property="og:description" content="정동진에서 일출 보며 차 마실 사람 모여라.">
 <title>보리 모닝 차실</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-180.png">
+<meta name="apple-mobile-web-app-title" content="보리 차실">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500&family=Poppins:wght@300;400;500&family=Inter:wght@400;500&display=swap">
 <style>
@@ -75,6 +79,7 @@ body{background:#0d1520;color:var(--ink);font-family:var(--f-ko);font-weight:300
 .pvrow{display:flex;align-items:center;gap:10px;font-family:var(--f-ui);font-size:12px;color:var(--ink-mid);padding:2px 4px}
 .pvrow label{display:flex;align-items:center;gap:6px;white-space:nowrap;cursor:pointer}
 .pvrow input[type=range]{flex:1;min-width:0;accent-color:var(--barley)}
+.lite-note{font-size:11px;color:var(--ink-mid);opacity:.8;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pvrow b{font-family:var(--f-brand);font-weight:400;color:var(--ink);font-variant-numeric:tabular-nums;min-width:3em;text-align:right}
 .bar{touch-action:none;padding-top:4px}
 .nogl{position:fixed;inset:0;display:grid;place-items:center;text-align:center;padding-inline:max(16px,env(safe-area-inset-left,0px));font-size:15px;line-height:1.9;background:#0d1520;color:var(--ink);z-index:100}
@@ -96,6 +101,7 @@ body{background:#0d1520;color:var(--ink);font-family:var(--f-ko);font-weight:300
 .kst{font-family:var(--f-brand);font-size:11px;letter-spacing:.2em;margin-left:6px;color:var(--ink-mid);vertical-align:top}
 .gate{position:fixed;inset:0;z-index:60;display:flex;justify-content:center;align-items:flex-start;overflow-y:auto;padding-top:max(14vh,calc(env(safe-area-inset-top,0px) + 24px));padding-bottom:24px;background:rgba(10,14,20,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding-inline:max(16px,env(safe-area-inset-left,0px))}
 .gate-card{width:100%;max-width:360px;min-width:0;margin:0 auto;display:grid;gap:14px;background:var(--glass-hi);border:1px solid var(--line);border-radius:18px;padding:24px;text-align:center}
+.gate-card .keep-fine{border-top:1px solid var(--line);padding-top:12px}.gate-card .keep-fine b{color:var(--ink);font-weight:500}
 .gate-card .fine{font-size:11.5px;line-height:1.7;color:rgba(243,239,230,.55)}
 .gate-card p{margin:0;word-break:keep-all;font-size:14px;line-height:1.8;color:var(--ink-mid)}
 .gate-card input{display:block;width:100%;min-width:0;max-width:100%;font:inherit;font-size:16px;color:var(--ink);background:rgba(243,239,230,.08);border:1px solid var(--line);border-radius:12px;padding:11px 14px;text-align:center;-webkit-user-select:text;user-select:text}
@@ -137,6 +143,36 @@ body.cha .greets,body.cha .say,body.cha .mine,body.cha .labels,body.cha .side,bo
 .shot-hint .btn{margin-top:4px}
 .shot-hint{font-family:var(--f-ui);font-size:11.5px;line-height:1.6;color:rgba(243,239,230,.6);text-align:center;max-width:320px}
 .flash{position:fixed;inset:0;z-index:59;background:#fff;opacity:0;pointer-events:none;transition:opacity .45s ease-out}
+/* 찻잎 매듭 방명록 */
+.gb{position:fixed;inset:0;z-index:58;display:flex;justify-content:center;align-items:flex-end;background:rgba(8,12,18,.55);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);padding:max(16px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 0 max(12px,env(safe-area-inset-left))}
+.gb-card{width:100%;max-width:520px;max-height:min(82vh,720px);display:flex;flex-direction:column;gap:12px;background:var(--glass-hi);border:1px solid var(--line);border-bottom:0;border-radius:18px 18px 0 0;padding:20px 18px max(18px,env(safe-area-inset-bottom));min-width:0}
+.gb-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.gb-sub{font-family:var(--f-ko);font-size:13px;color:var(--ink-mid);margin-top:4px}
+.gb-mine{font-family:var(--f-ui);font-size:12px;line-height:1.7;color:var(--ink-mid);background:rgba(243,239,230,.06);border-radius:12px;padding:10px 12px}
+.gb-mine b{color:var(--barley);font-weight:500}
+.gb-form{display:flex;gap:8px;min-width:0}
+.gb-form input{flex:1;min-width:0;font:inherit;font-size:16px;color:var(--ink);background:rgba(243,239,230,.08);border:1px solid var(--line);border-radius:999px;padding:9px 14px}
+.gb-note{margin:0;font-family:var(--f-ui);font-size:11.5px;color:var(--ink-mid)}
+.gb-list{list-style:none;margin:0;padding:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:grid;gap:8px;min-height:60px}
+.gb-list li{display:grid;grid-template-columns:10px 1fr;gap:10px;align-items:start;padding:10px 4px;border-top:1px solid rgba(243,239,230,.08);min-width:0}
+.gb-list i{width:10px;height:22px;border-radius:2px;margin-top:3px}
+.gb-list .m{font-size:14px;line-height:1.6;color:var(--ink);word-break:keep-all;overflow-wrap:anywhere}
+.gb-list .w{font-family:var(--f-ui);font-size:11.5px;color:var(--ink-mid);margin-top:2px}
+.gb-empty{font-size:13px;color:var(--ink-mid);text-align:center;padding:16px 0}
+.gb-link{background:none;border:0;color:var(--ink-mid);font-family:var(--f-ui);font-size:12px;text-decoration:underline;cursor:pointer;align-self:center;padding:4px}
+.knot-tip{position:fixed;left:50%;top:max(90px,calc(env(safe-area-inset-top) + 76px));transform:translateX(-50%);z-index:40;max-width:min(86vw,420px);background:var(--paper);color:var(--text);border-radius:14px;padding:12px 16px;font-size:14px;line-height:1.6;box-shadow:0 8px 30px rgba(0,0,0,.35);pointer-events:none;word-break:keep-all;overflow-wrap:anywhere}
+.knot-tip small{display:block;font-family:var(--f-ui);font-size:11.5px;color:#6b6358;margin-top:4px}
+.keep-card{text-align:left}.keep-card h3{margin:0;font-family:var(--f-ko);font-weight:500;font-size:17px;line-height:1.5;color:var(--ink)}
+.keep-card p b{color:var(--ink);font-weight:500}
+.cupchip{pointer-events:auto;font-family:var(--f-ui);font-size:12px;letter-spacing:.03em;color:var(--ink-mid);background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:5px 11px;cursor:pointer;white-space:nowrap}
+.cupchip b{font-family:var(--f-brand);font-weight:500;color:var(--barley);font-variant-numeric:tabular-nums;margin:0 1px 0 3px}
+.rk-total{font-family:var(--f-brand);font-weight:300;font-size:40px;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
+.rk-total small{font-family:var(--f-ko);font-size:14px;color:var(--ink-mid);margin-left:4px}
+.rk-list{list-style:none;margin:0;padding:0;overflow-y:auto;display:grid;gap:2px}
+.rk-list li{display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center;padding:9px 4px;border-top:1px solid rgba(243,239,230,.08);font-size:14px;min-width:0}
+.rk-list .no{font-family:var(--f-brand);color:var(--ink-mid);text-align:center}.rk-list li:nth-child(-n+3) .no{color:var(--barley)}
+.rk-list .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}.rk-list .me .nm{color:var(--barley)}
+.rk-list .c{font-family:var(--f-brand);font-variant-numeric:tabular-nums;color:var(--ink)}
 </style>
 
 </head>
@@ -147,6 +183,7 @@ body.cha .greets,body.cha .say,body.cha .mine,body.cha .labels,body.cha .side,bo
     <div class="logo">BORIH MORNING</div>
     <p>정동진 보리 차실에 오신 걸 환영해요.<br>차실에서 불릴 이름을 알려주세요.</p>
     <p class="fine">이름과 걷는 모습, 남긴 메시지는 지금 차실에 있는 모든 분에게 보여요.<br>창을 닫으면 차실에서 나가요.</p>
+    <p class="fine keep-fine"><b>같은 기기, 같은 브라우저로 다시 오면 기록이 이어져요.</b><br>사파리로 시작했다면 다음에도 사파리로 열어 주세요.<br>카카오톡·인스타그램 안이나 시크릿 모드에서는 새로 시작돼요.<br>홈 화면에 추가해 두면 다시 오기 쉬워요.</p>
     <input id="nick" maxlength="12" autocomplete="nickname" placeholder="예: 보리" aria-label="이름">
     <button class="btn main" type="submit">차실로 들어가기</button>
   </form>
@@ -159,11 +196,39 @@ body.cha .greets,body.cha .say,body.cha .mine,body.cha .labels,body.cha .side,bo
   <div style="display:grid">
     <div class="top">
       <div><div class="logo">BORIH MORNING<span class="ver" id="ver"></span></div><div class="status" id="status"><span class="dot"></span>차실을 여는 중</div></div>
-      <div class="time"><div class="clock" id="clock">--:--</div><div class="sr" id="sr">정동진 일출 <b>--:--</b></div><button class="btn homebtn" id="home">시점 되돌리기</button></div>
+      <div class="time"><div class="clock" id="clock">--:--</div><div class="sr" id="sr">정동진 일출 <b>--:--</b></div><button class="cupchip" id="cupChip" type="button" hidden>함께 마신 차 <b id="cupTotal">0</b>잔</button><button class="btn homebtn" id="home">시점 되돌리기</button></div>
     </div>
     <div class="hint" id="hint">화면을 끌어 걸어보세요 · 출입문으로 들어가요</div>
   </div>
   <div class="flash" id="flash"></div>
+  <div class="knot-tip" id="knotTip" hidden></div>
+  <div class="gb" id="rk" hidden><div class="gb-card" role="dialog" aria-label="함께 마신 차">
+    <div class="gb-head"><div><div class="logo">함께 마신 차</div><div class="gb-sub">정동진 보리 차실에서 보듬이에 따른 잔</div></div><button class="btn" id="rkClose" type="button">닫기</button></div>
+    <div class="rk-total"><span id="rkTotal">0</span><small>잔</small></div>
+    <div class="gb-mine" id="rkMine"></div>
+    <div class="gb-sub">가장 많이 마신 분</div>
+    <ol class="rk-list" id="rkList"></ol>
+    <p class="gb-note">같은 이름은 함께 세어요 · 1분마다 새로 고쳐져요</p>
+  </div></div>
+  <div class="gb" id="gb" hidden><div class="gb-card" role="dialog" aria-label="찻잎 매듭 방명록">
+    <div class="gb-head"><div><div class="logo">찻잎 매듭</div><div class="gb-sub">정동진 보리 차실 방명록 · 차실 앞 나무에 걸려요</div></div><button class="btn" id="gbClose" type="button">닫기</button></div>
+    <div class="gb-mine" id="gbMine"></div>
+    <form class="gb-form" id="gbForm"><input id="gbMsg" maxlength="80" autocomplete="off" placeholder="한 줄 남기기" aria-label="방명록 한 줄"><button class="btn main" type="submit" id="gbTie">걸기</button></form>
+    <p class="gb-note" id="gbNote">이름과 남긴 말은 누구나 볼 수 있어요 · 링크는 걸 수 없어요</p>
+    <ol class="gb-list" id="gbList"></ol>
+    <button class="btn" id="gbMore" type="button" hidden>더 보기</button>
+    <button class="gb-link" id="gbHow" type="button">기록 이어가기 안내</button>
+  </div></div>
+  <div class="gate" id="keep" hidden><div class="gate-card keep-card" role="dialog" aria-label="기록 이어가기 안내">
+    <div class="logo">BORIH MORNING</div>
+    <h3>기록을 이어가려면 꼭 확인해 주세요</h3>
+    <p><b>처음 시작한 기기와 브라우저에서 같은 주소로 다시 와 주세요.</b></p>
+    <p>사파리에서 시작했다면 다음에도 사파리로, 크롬에서 시작했다면 크롬으로 열어 주세요.</p>
+    <p>카카오톡이나 인스타그램 안에서 열면 새 기록으로 시작될 수 있어요.</p>
+    <p>시크릿 모드로 들어오거나 방문 기록을 지우면 기록이 사라져요. 아이폰 사파리는 일주일 넘게 오지 않으면 기록을 지울 수 있어요.</p>
+    <p><b>홈 화면에 추가해 두면</b> 다음부터 더 쉽게 들어올 수 있어요.<br><span class="fine">아이폰: 사파리 아래 공유 버튼 → '홈 화면에 추가'</span></p>
+    <button class="btn main" id="keepOk" type="button">알겠어요</button>
+  </div></div>
   <div class="shot" id="shot" hidden><div class="shot-card"><img id="shotImg" alt="오늘의 찻자리 사진"><div class="shot-acts"><button class="btn" id="shotSave">사진 저장</button><button class="btn main" id="shotSend">친구에게 보내기</button><button class="btn" id="shotClose">닫기</button></div><p class="shot-hint" id="shotHint">폰에서는 공유 창이 열려요. '이미지 저장'은 사진첩으로,<br>카카오톡·인스타그램을 고르면 친구에게 바로 보낼 수 있어요.</p></div></div>
   <div class="bottom">
     <div class="greets" id="greets" aria-live="polite"></div>
@@ -174,6 +239,7 @@ body.cha .greets,body.cha .say,body.cha .mine,body.cha .labels,body.cha .side,bo
       <div class="acts">
         <button class="btn" id="bow">인사</button>
         <button class="btn" id="photo">사진</button>
+        <button class="btn" id="gbBtn">방명록</button>
         <button class="btn main" id="brewBtn" hidden>차 우리기</button>
         <button class="btn main" id="pourBtn" hidden disabled>보듬이에 따르기</button>
         <button class="btn" id="sip" disabled>한 모금</button>
@@ -185,6 +251,7 @@ body.cha .greets,body.cha .say,body.cha .mine,body.cha .labels,body.cha .side,bo
       <div class="teas" id="tea" role="radiogroup" aria-label="오늘의 차"></div>
       <div class="brewbar"><i id="brewbar"></i></div>
       <div class="pvrow"><label><input type="checkbox" id="pvOn"> 하루 미리보기</label><input type="range" id="pv" min="0" max="100" value="8" aria-label="미리보기 시각"><b id="pvT">--:--</b></div>
+      <div class="pvrow"><label><input type="checkbox" id="liteOn"> 가볍게 보기</label><span class="lite-note">버벅일 때 켜 주세요</span></div>
       <div class="solo" id="solo" hidden>지금은 차실에 연결하지 못해 혼자 보는 화면이에요. 잠시 뒤 다시 들어와 주세요.</div>
     </div>
   </div>
@@ -262,6 +329,14 @@ const cam=new THREE.PerspectiveCamera(50,1,.1,800);
 const hemi=new THREE.HemisphereLight(0x9db8d0,0x3a2f27,.5);scene.add(hemi);
 const sunL=new THREE.DirectionalLight(0xffd6a8,0);sunL.castShadow=true;sunL.shadow.mapSize.set(LOW?512:1024,LOW?512:1024);
 Object.assign(sunL.shadow.camera,{left:-12,right:12,top:12,bottom:-12});scene.add(sunL);
+/* ===== lighter on modest machines: the first seconds are measured and quality steps down if the frames come slowly.
+   level 0 full · 1 no shadows, sharper pixels capped · 2 also fewer loose leaves and plain pixels. The level is remembered on this device. ===== */
+const QUALITY={level:0,auto:0,lite:!!store.get('lite'),hooks:[]},DPR=Math.min(LOW?1.5:2,devicePixelRatio||1);
+function applyQuality(lv){lv=Math.max(0,Math.min(2,lv|0));QUALITY.auto=lv;setLevel()}
+// '가볍게 보기' (level 3) is the visitor's own choice and wins over the measured level
+function setLevel(){const lv=QUALITY.lite?3:(QUALITY.auto|0);QUALITY.level=lv;
+  renderer.setPixelRatio(lv>=3?Math.min(1,DPR)*.75:lv>=2?1:lv>=1?Math.min(DPR,1.25):DPR);sunL.castShadow=lv<1;
+  QUALITY.hooks.forEach(f=>{try{f(lv)}catch(e){}});if(typeof resize==='function')resize();store.set('q',QUALITY.auto|0)}
 const C=h=>new THREE.Color(h);
 const mat=(c,o={})=>new THREE.MeshStandardMaterial(Object.assign({color:C(c),roughness:.85,metalness:0},o));
 const box=(w,h,d,m,x,y,z)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);scene.add(o);return o};
@@ -293,6 +368,8 @@ function farTrees(spots,autumn){   // spots: [{p:Vector3, s:size}]
   const tm=new THREE.InstancedMesh(new THREE.CylinderGeometry(.7,1,1,5),mat('#3d302a',{roughness:1}),trunks.length);
   trunks.forEach(([p,h,r,l],k)=>{e.set(0,0,l);q.setFromEuler(e);m4.compose(v.set(p.x,p.y+h/2,p.z),q,sc.set(r,h,r));tm.setMatrixAt(k,m4)});scene.add(tm);
   const lm=new THREE.InstancedMesh(LUMPY,new THREE.MeshStandardMaterial({roughness:1}),lumps.length);
+  // every far tree has one trunk and three lumps, in the same order, so halving both keeps whole trees
+  QUALITY.hooks.push(lv=>{const half=Math.floor(trunks.length/2);tm.count=lv>=3?half:trunks.length;lm.count=lv>=3?Math.min(lumps.length,half*3):lumps.length});
   lumps.forEach(([x,y,z,w,h,col],k)=>{e.set(0,Math.random()*6.3,0);q.setFromEuler(e);m4.compose(v.set(x,y,z),q,sc.set(w,h,w));lm.setMatrixAt(k,m4);lm.setColorAt(k,c.set(col).multiplyScalar(.82+Math.random()*.22))});scene.add(lm)}
 if(kst(Date.now()).getUTCMonth()+1>=9&&kst(Date.now()).getUTCMonth()+1<=11){
   const HILL_COLS=['#7a4a26','#8a5a2a','#6e5a2c','#7d3f24','#86662e'],CROWN=['#b4502a','#c8702c','#d89a3c','#9a3a22','#c9a24a','#a8622a','#2f3d2c','#e0b552','#8c2f1e'];
@@ -377,8 +454,38 @@ const pineM=mat('#2c3a2c',{roughness:1}),trunkM=mat('#4a3a2c');   // kept for an
   const e=new THREE.Euler();['maple','ginkgo'].forEach(kind=>{const L=cards[kind];if(!L.length)return;
     const im=new THREE.InstancedMesh(new THREE.PlaneGeometry(.42,.42),LEAF_M[kind],L.length);
     L.forEach(([p,c],k)=>{e.set(R(0,6.3),R(0,6.3),R(0,6.3));q.setFromEuler(e);m4.compose(p,q,sc.set(1,1,1).multiplyScalar(R(.8,1.2)));im.setMatrixAt(k,m4);im.setColorAt(k,col.set(c).multiplyScalar(R(.9,1.08)))});
+    QUALITY.hooks.push(lv=>{im.count=lv>=2?Math.floor(L.length*.55):L.length});
     scene.add(im)});
 })();
+
+/* ===== the knot tree: a 해송 by the path where the guestbook's tea-leaf knots hang ===== */
+const KNOT_TREE={x:4.7,z:8.6},KNOT_MAX=50;
+const knotTree=(()=>{const g=new THREE.Group();g.position.set(KNOT_TREE.x,GROUND,KNOT_TREE.z);scene.add(g);
+  const bark=mat('#3d302a',{roughness:1}),pad=mat('#2a3a24',{roughness:1}),V=(x,y,z)=>new THREE.Vector3(x,y,z),UP=V(0,1,0);
+  const limb=(a,b,r)=>{const d=b.clone().sub(a),m=new THREE.Mesh(new THREE.CylinderGeometry(r*.75,r,1,7),bark);m.scale.set(1,d.length(),1);m.position.copy(a).add(b).multiplyScalar(.5);m.quaternion.setFromUnitVectors(UP,d.normalize());m.castShadow=true;g.add(m)};
+  const t0=V(0,0,0),t1=V(.08,1.25,0),t2=V(-.05,2.3,.04);limb(t0,t1,.19);limb(t1,t2,.14);
+  // five low limbs reach out level, so the knots hang where people can see them
+  const branches=[[0,1.45,1.35],[1.25,1.62,1.25],[2.5,1.5,1.3],[3.75,1.72,1.2],[5,1.58,1.3]].map(([a,y,L])=>{const b0=V(Math.cos(a)*.08,y,Math.sin(a)*.08),b1=V(Math.cos(a)*L,y+.18,Math.sin(a)*L);limb(b0,b1,.055);
+    const pr=.55;const m=new THREE.Mesh(LUMPY,pad);m.scale.set(pr,pr*.4,pr);m.position.copy(b1).add(V(0,.16,0));m.castShadow=true;g.add(m);return[b0,b1]});
+  [[0,2.45,0,.95],[.3,2.85,.1,.6]].forEach(([x,y,z,r])=>{const m=new THREE.Mesh(LUMPY,pad);m.scale.set(r,r*.45,r);m.position.set(x,y,z);m.castShadow=true;g.add(m)});
+  // each knot: a short string, a paper strip in the writer's robe colour, a small tea leaf at the top
+  const strings=new THREE.InstancedMesh(new THREE.BoxGeometry(.006,.14,.006),mat('#d9cdb4',{roughness:1}),KNOT_MAX);
+  const strips=new THREE.InstancedMesh(new THREE.PlaneGeometry(.075,.22),new THREE.MeshStandardMaterial({roughness:.9,side:THREE.DoubleSide}),KNOT_MAX);
+  const leaves=new THREE.InstancedMesh(new THREE.PlaneGeometry(.08,.08),LEAF_M.maple,KNOT_MAX);
+  [strings,strips,leaves].forEach(m=>{m.count=0;g.add(m)});
+  const hang=[];for(let k=0;k<KNOT_MAX;k++){const [b0,b1]=branches[k%5],f=.3+.65*(((k/5|0)*.618)%1);hang.push({p:b0.clone().lerp(b1,f),ph:k*1.7,ry:(k*2.39)%6.28})}
+  const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),pv=new THREE.Vector3(),one=new THREE.Vector3(1,1,1),col=new THREE.Color();
+  let n=0;
+  function place(t){for(let k=0;k<n;k++){const h=hang[k],sw=Math.sin(t*.0011+h.ph)*.08;
+      e.set(0,h.ry,sw);q.setFromEuler(e);
+      m4.compose(pv.set(h.p.x+Math.sin(sw)*.07,h.p.y-.07,h.p.z),q,one);strings.setMatrixAt(k,m4);
+      m4.compose(pv.set(h.p.x+Math.sin(sw)*.25,h.p.y-.25,h.p.z),q,one);strips.setMatrixAt(k,m4);
+      e.set(0,h.ry,sw+.6);q.setFromEuler(e);m4.compose(pv.set(h.p.x+Math.sin(sw)*.15,h.p.y-.14,h.p.z),q,one);leaves.setMatrixAt(k,m4)}
+    strings.instanceMatrix.needsUpdate=strips.instanceMatrix.needsUpdate=leaves.instanceMatrix.needsUpdate=true}
+  return{strips,set(list){n=Math.min(KNOT_MAX,list.length);[strings,strips,leaves].forEach(m=>m.count=n);
+      for(let k=0;k<n;k++){strips.setColorAt(k,col.set(list[k].color).lerp(C('#faf6ec'),.18));leaves.setColorAt(k,col.set('#6f8f4e'))}
+      if(strips.instanceColor)strips.instanceColor.needsUpdate=true;if(leaves.instanceColor)leaves.instanceColor.needsUpdate=true;place(performance.now())},
+    tick(t){if(n)place(t)}}})();
 
 /* ===== autumn: 단풍잎 and 은행잎 on the yard, a few drifting down ===== */
 const LEAF_COLS=['#b4502a','#c8702c','#d89a3c','#9a3a22','#c9a24a','#a8622a','#e0b552'];
@@ -402,6 +509,7 @@ if(AUTUMN){
   const leafGeo=new THREE.PlaneGeometry(.32,.32);leafGeo.rotateX(-Math.PI/2);
   const N=LOW?2400:5200,m4=new THREE.Matrix4(),q4=new THREE.Quaternion(),e=new THREE.Euler(),col=new THREE.Color(),pv=new THREE.Vector3(),sv=new THREE.Vector3();
   const meshes=['maple','ginkgo'].map(kind=>{const m=new THREE.InstancedMesh(leafGeo,LEAF_M[kind],N/2);m.receiveShadow=true;scene.add(m);return m});
+  QUALITY.hooks.push(lv=>meshes.forEach(m=>{m.count=lv>=2?Math.floor(N/2*.45):N/2}));   // the painted carpet underneath keeps the yard covered
   const heaps=[[-7.5,9,1.8],[7.8,12.5,1.8],[-8.8,17,1.8],[8.5,19,1.8],[-9.6,6,1.4],[9.8,7,1.4]];for(let k=0;k<(LOW?10:18);k++)heaps.push([rnd(-8.5,8.5),rnd(6,21.5),rnd(.6,1.3)]);
   const LV=[],grid=new Map(),cell=(x,z)=>Math.floor(x)+','+Math.floor(z);
   const put=l=>{const key=cell(l.x,l.z);let a=grid.get(key);if(!a)grid.set(key,a=[]);a.push(l);l.cell=key};
@@ -421,7 +529,7 @@ if(AUTUMN){
       const bp=a.createBiquadFilter();bp.type='bandpass';bp.frequency.value=2600+Math.random()*1400;bp.Q.value=.8;
       const g=a.createGain(),n=a.currentTime;g.gain.setValueAtTime(0,n);g.gain.linearRampToValueAtTime(.014,n+.012);g.gain.exponentialRampToValueAtTime(.0004,n+.2);
       src.connect(bp).connect(g).connect(a.destination);src.start(n);src.stop(n+.25)}catch(e){}};
-  litter={tick(dt){
+  litter={busy:()=>live.length>0,tick(dt){
     // every walker (you and everyone you can see) stirs the leaves around their feet
     const walkers=[me,...others.values()];let myKick=false;
     for(const w of walkers){const px=prevPos.get(w);prevPos.set(w,[w.x,w.z]);if(!px||w.z<5||(w.mode||w.pr&&w.pr.mode)==='sit')continue;
@@ -442,7 +550,7 @@ if(AUTUMN){
   // a handful drifting down, recycled
   const F=LOW?24:48,H=F/2,fls=['maple','ginkgo'].map(kind=>new THREE.InstancedMesh(new THREE.PlaneGeometry(.24,.24),LEAF_M[kind],H));
   const st=[];for(let k=0;k<F;k++){st.push({x:rnd(-10,10),y:rnd(0,5),z:rnd(-3,20),ph:rnd(0,6.3),sp:rnd(.25,.5),sw:rnd(.3,.8)});const ki=k<H?0:1,cols=ki?LITTER_GINKGO:LITTER_MAPLE;fls[ki].setColorAt(k%H,col.set(cols[k%cols.length]))}
-  fls.forEach(f=>scene.add(f));const fl={setMatrixAt:(k,m)=>fls[k<H?0:1].setMatrixAt(k%H,m),instanceMatrix:{set needsUpdate(v){fls.forEach(f=>f.instanceMatrix.needsUpdate=true)}}};
+  fls.forEach(f=>scene.add(f));QUALITY.hooks.push(lv=>fls.forEach(f=>{f.visible=lv<3}));const fl={setMatrixAt:(k,m)=>fls[k<H?0:1].setMatrixAt(k%H,m),instanceMatrix:{set needsUpdate(v){fls.forEach(f=>f.instanceMatrix.needsUpdate=true)}}};
   falling={tick(dt,now){for(let k=0;k<F;k++){const o=st[k];o.y-=o.sp*dt;o.ph+=dt*1.6;
       const inside=Math.abs(o.x)<8&&o.z>-4.9&&o.z<4.9;if(o.y<(inside?.02:GROUND)||inside&&o.y<4.3&&o.y>4.25){o.y=rnd(4.6,6.5);o.x=rnd(-10,10);o.z=rnd(-3,20)}
       e.set(Math.sin(o.ph)*1.2,o.ph*.7,Math.cos(o.ph*1.3)*.9);q4.setFromEuler(e);
@@ -772,7 +880,7 @@ function animateChar(c,now,dt,o){
 
 /* ===== people ===== */
 const me={x:(Math.random()-.5)*.8,z:15,ry:0,mode:'walk',seat:null,brew:null,sk:0,drink:false,act:null,actAt:0,bowl:BOWLS[Math.floor(Math.random()*BOWLS.length)],tea:(()=>{const k=store.get('tea2');return ['green','white','oolong','puer','black'].includes(k)?k:'green'})(),
-  greet:'',greetAt:0,phase:null,steep:0,until:0,total:0,emote:null,emoteAt:0,color:ROBES[Math.floor(Math.random()*ROBES.length)]};
+  greet:'',greetAt:0,phase:null,steep:0,until:0,total:0,emote:null,emoteAt:0,color:(()=>{const c=store.get('robe');if(typeof c==='string'&&ROBES.includes(c))return c;const n=ROBES[Math.floor(Math.random()*ROBES.length)];store.set('robe',n);return n})()};
 me.sips=0;   // a fresh sprout on every visit
 me.char=makeChar(me.color);setSprout(me.char,me.sips);setBowlColor(me.char.hand,me.bowl);
 const others=new Map();
@@ -888,7 +996,7 @@ function finishAct(){
   if(k==='cd2tp'){me.act=null;startAct('tb2tp');return}
   if(k==='tb2tp'){me.steep++;me.brew='steep';timer(steepTime(me.tea,me.steep))}
   else if(k==='tp2sk'){me.sk=3;me.brew='ready';timer(0)}
-  else if(k==='sk2bd'){me.sk=Math.max(0,me.sk-1);me.drink=true;me.cup=1;logTea();
+  else if(k==='sk2bd'){me.sk=Math.max(0,me.sk-1);me.drink=true;me.cup=1;logTea();countCup();
     if(me.sk===0)me.brew='idle'}
   presence();brewText();
 }
@@ -1013,8 +1121,22 @@ function updateCam(){
 
 /* ===== animate ===== */
 const bitM4=new THREE.Matrix4(),bitE=new THREE.Euler(),v=new THREE.Vector3(),sv=new THREE.Vector3(),sa=new THREE.Vector3(),sb=new THREE.Vector3();let last=performance.now();
+let lastRaw=0,lastInput=0;const PERF={from:0,n:0,sum:0,done:false};
+['pointerdown','pointermove','wheel','keydown','touchmove'].forEach(ev=>addEventListener(ev,()=>{lastInput=performance.now()},{passive:true}));
+function busy(now){if(now-lastInput<800||now-movedAt<800||me.act||dropped.length||(litter&&litter.busy()))return true;
+  for(const o of others.values())if(o.char.speed>.05)return true;return false}
+document.addEventListener('visibilitychange',()=>{PERF.from=0});   // coming back to the tab is not a slow frame
+function measure(now,raw){if(PERF.done||QUALITY.lite)return;if(document.visibilityState!=='visible'){PERF.from=0;return}raw=Math.min(raw,2000);
+  if(!PERF.from){PERF.from=now+1500;PERF.n=0;PERF.sum=0;return}   // let the first second or so settle
+  if(now<PERF.from)return;PERF.n++;PERF.sum+=raw;
+  if(now-PERF.from>3000){const fps=1000/(PERF.sum/PERF.n);
+    if(fps<42&&QUALITY.level<2&&!PERF.up){applyQuality(QUALITY.level+1);PERF.from=0}
+    else if(fps>=57&&QUALITY.level>0&&!PERF.tried){PERF.tried=PERF.up=true;applyQuality(QUALITY.level-1);PERF.from=0}   // a machine that was slow once gets another chance
+    else{if(PERF.up&&fps<42)applyQuality(QUALITY.level+1);PERF.done=true}}}
 function frame(now){
   requestAnimationFrame(frame);
+  const raw=now-lastRaw;lastRaw=now;measure(now,raw);
+  if(now-last<31&&(QUALITY.lite||PERF.done&&!busy(now)))return;   // resting (or 가볍게 보기): about 30 frames a second
   const dt=Math.min(.1,(now-last)/1000);last=now;
   const s=sun(sceneTime()),p=updateEnv(now,s),day=clamp((s.alt+12)/22,0,1);
   hemi.color.setRGB(p.top[0]/255,p.top[1]/255,p.top[2]/255);hemi.intensity=.3+.55*day;
@@ -1024,6 +1146,7 @@ function frame(now){
 
   if(falling)falling.tick(dt,now);
   if(litter)litter.tick(dt);
+  knotTree.tick(now);
   if(dropped.length)tickDropped(dt,now);
   moveMe(dt);
   me.char.g.position.set(me.x,me.mode==='sit'&&me.seat!=null?seatPos[me.seat].y:floorAt(me.x,me.z),me.z);me.char.g.rotation.y=me.ry;
@@ -1102,6 +1225,8 @@ function frame(now){
     el.style.transform=`translate(${(v.x*.5+.5)*innerWidth}px,${(-v.y*.5+.5)*innerHeight}px) translate(-50%,-100%)`};
   place('me',me.char);for(const [k,o] of others)place(k,o.char);
 }
+QUALITY.auto=store.get('q')|0;$('liteOn').checked=QUALITY.lite;setLevel();
+$('liteOn').onchange=e=>{QUALITY.lite=e.target.checked;store.set('lite',QUALITY.lite?1:0);setLevel()};
 requestAnimationFrame(frame);
 
 // after the season: no entry, no connection, just the way to the next sunrise spot
@@ -1109,6 +1234,91 @@ let closed=false;
 function closeRoom(){if(closed)return;closed=true;try{room&&room.bye&&room.bye()}catch(e){}room=null;$('gate').hidden=true;
   const next=NEXT_URL?`<a class="btn main" href="${esc(NEXT_URL)}">${esc(NEXT_PLACE||'새 차실')}로 가기</a>`:'<span class="fine">새 장소는 보리 인스타그램에서 알려드릴게요.</span>';
   document.body.insertAdjacentHTML('beforeend',`<div class="gate"><div class="gate-card"><div class="logo">BORIH MORNING</div><p>${esc(PLACE)} 보리 차실은 문을 닫았어요.<br>보리 차실은 이제 새로운 일출 장소로 옮겨갑니다.${NEXT_PLACE?`<br>다음 차실은 <b>${esc(NEXT_PLACE)}</b>이에요.`:''}</p>${next}</div></div>`)}
+/* ===== 기록 이어가기: kept in this browser only (no account) ===== */
+const p2=n=>String(n).padStart(2,'0');
+const dayKey=t=>{const d=kst(t);return `${d.getUTCFullYear()}-${p2(d.getUTCMonth()+1)}-${p2(d.getUTCDate())}`};
+const REC=(()=>{let r=store.get('rec');if(!r||typeof r!=='object')r={};
+  r.days=Array.isArray(r.days)?r.days.filter(d=>typeof d==='string'&&/^\d{4}-\d\d-\d\d$/.test(d)).slice(-400):[];
+  r.cups=r.cups&&typeof r.cups==='object'?r.cups:{};r.stamps=r.stamps&&typeof r.stamps==='object'?r.stamps:{};return r})();
+const saveRec=()=>store.set('rec',REC);
+function markVisit(){const d=dayKey(Date.now()),fresh=REC.days[REC.days.length-1]!==d;if(fresh)REC.days.push(d);if(!REC.stamps[PLACE])REC.stamps[PLACE]=d;saveRec();return fresh}
+function countCup(){const k=TEAS.some(t=>t.k===me.tea)?me.tea:TEAS[0].k;REC.cups[k]=(+REC.cups[k]||0)+1;saveRec();pourCup(k)}
+function recSummary(){const n=REC.days.length,cups=TEAS.filter(t=>+REC.cups[t.k]>0).map(t=>`${t.n} ${REC.cups[t.k]}잔`).join(' · ');
+  const st=Object.keys(REC.stamps).map(k=>`${esc(k)} ${esc(String(REC.stamps[k]).slice(5).replace('-','.'))}`).join(' · ');
+  return `<b>${esc(me.name||'손님')}</b> · ${n>1?`${n}번째 찻자리`:"첫 찻자리"}<br>마신 차 · ${cups||'아직 없어요'}<br>해돋이 순례 도장 · ${st||'정동진'}`}
+
+/* ===== 찻잎 매듭 방명록: shared, kept in Supabase (table guestbook: write and read only, never edit) ===== */
+let gbSb=null;
+const gbClient=()=>{if(gbSb)return gbSb;if(!window.supabase)return null;try{gbSb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false,autoRefreshToken:false}})}catch(e){gbSb=null}return gbSb};
+const cleanKnot=r=>{if(!r||typeof r!=='object')return null;const name=cleanText(String(r.name||''),12).trim(),message=cleanText(String(r.message||''),80).trim();if(!message)return null;
+  return{id:+r.id||0,at:Date.parse(r.created_at)||Date.now(),name:name||'손님',message,tea:TEAS.some(t=>t.k===r.tea)?r.tea:null,color:HEX.test(r.color||'')?r.color:ROBES[0]}};
+let knots=[],gbOffset=0,gbBusy=false,knotsAt=0,knotTimer=null;
+const gbSelect='id,created_at,name,message,tea,color';
+async function loadKnots(){const c=gbClient();if(!c)return;knotsAt=Date.now();
+  try{const {data,error}=await c.from('guestbook').select(gbSelect).eq('place',PLACE).order('created_at',{ascending:false}).limit(KNOT_MAX);
+    if(error||!Array.isArray(data))return;knots=data.map(cleanKnot).filter(Boolean);knotTree.set(knots);if(!$('gb').hidden)renderList(knots,true)}catch(e){}}
+function knotsChanged(){if(knotTimer)return;knotTimer=setTimeout(()=>{knotTimer=null;loadKnots()},Math.max(1500,5000-(Date.now()-knotsAt)))}
+setInterval(()=>{if(document.visibilityState==='visible'&&Date.now()-knotsAt>90000)loadKnots()},30000);
+const whenText=t=>{const d=kst(t);return `${d.getUTCMonth()+1}.${p2(d.getUTCDate())} ${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}`};
+function renderList(list,reset){const ol=$('gbList');if(reset){ol.innerHTML='';gbOffset=0}
+  if(reset&&!list.length){ol.innerHTML='<li class="gb-empty" style="display:block">아직 걸린 매듭이 없어요. 첫 매듭을 걸어 주세요.</li>';$('gbMore').hidden=true;return}
+  ol.insertAdjacentHTML('beforeend',list.map(k=>`<li><i style="background:${k.color}"></i><div><div class="m">${esc(k.message)}</div><div class="w">${esc(k.name)}${k.tea?' · '+esc(teaOf(k.tea).n):''} · ${whenText(k.at)}</div></div></li>`).join(''));
+  gbOffset+=list.length;$('gbMore').hidden=list.length<(reset?KNOT_MAX:30)}
+async function moreKnots(){const c=gbClient();if(!c||gbBusy)return;gbBusy=true;$('gbMore').textContent='불러오는 중…';
+  try{const {data,error}=await c.from('guestbook').select(gbSelect).eq('place',PLACE).order('created_at',{ascending:false}).range(gbOffset,gbOffset+29);
+    if(!error&&Array.isArray(data))renderList(data.map(cleanKnot).filter(Boolean),false)}catch(e){}
+  gbBusy=false;$('gbMore').textContent='더 보기'}
+function openGb(){$('gbMine').innerHTML=recSummary();renderList(knots,true);$('gb').hidden=false;loadKnots()}
+const closeGb=()=>{$('gb').hidden=true};
+$('gbBtn').onclick=openGb;$('gbClose').onclick=closeGb;$('gbMore').onclick=moreKnots;
+$('gb').addEventListener('click',e=>{if(e.target.id==='gb')closeGb()});
+$('gbForm').onsubmit=async e=>{e.preventDefault();if(gbBusy)return;
+  const msg=cleanText($('gbMsg').value.replace(/\s+/g,' ').trim(),80).trim(),note=$('gbNote');if(!msg){$('gbMsg').focus();return}
+  const c=gbClient();if(!c){note.textContent='지금은 방명록에 연결하지 못했어요 · 잠시 뒤 다시 걸어 주세요';return}
+  const device=String(store.get('id')||'').replace(/[^A-Za-z0-9_-]/g,'').slice(0,40)||('v'+Math.random().toString(36).slice(2,12));
+  gbBusy=true;$('gbTie').disabled=true;note.textContent='매듭을 거는 중…';
+  try{const {error}=await c.from('guestbook').insert({place:PLACE,name:(me.name||'손님').slice(0,12),message:msg,tea:me.tea,color:me.color,device});
+    if(error){const m=String(error.message||'');
+      note.textContent=m.includes('too_soon')?'매듭은 30초에 하나씩 걸 수 있어요':m.includes('too_many_today')?'오늘은 매듭을 충분히 걸었어요 · 내일 또 걸어 주세요':m.includes('room_busy')?'지금 매듭이 많이 걸리고 있어요 · 조금 뒤에 걸어 주세요':m.includes('no_links')?'링크는 걸 수 없어요':'매듭을 걸지 못했어요 · 잠시 뒤 다시 걸어 주세요'}
+    else{$('gbMsg').value='';note.textContent='매듭을 걸었어요 · 차실 앞 나무에 걸렸어요';
+      knots.unshift({id:0,at:Date.now(),name:me.name||'손님',message:msg,tea:me.tea,color:me.color});knots=knots.slice(0,KNOT_MAX);knotTree.set(knots);renderList(knots,true);
+      room&&room.knot&&room.knot();setTimeout(loadKnots,1500)}}
+  catch(err){note.textContent='매듭을 걸지 못했어요 · 잠시 뒤 다시 걸어 주세요'}
+  gbBusy=false;$('gbTie').disabled=false};
+// tap a knot on the tree to read it
+{const cvs=$('gl'),ray=new THREE.Raycaster(),ndc=new THREE.Vector2();let down=null,tipTimer=null;
+  cvs.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,t:performance.now()}});
+  cvs.addEventListener('pointerup',e=>{if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>8||performance.now()-down.t>500||!knots.length){down=null;return}down=null;
+    const r=cvs.getBoundingClientRect();ndc.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);ray.setFromCamera(ndc,cam);
+    const hit=ray.intersectObject(knotTree.strips,false)[0];if(!hit||hit.instanceId==null||!knots[hit.instanceId])return;const k=knots[hit.instanceId];
+    const tip=$('knotTip');tip.innerHTML=`${esc(k.message)}<small>${esc(k.name)} · ${whenText(k.at)}</small>`;tip.hidden=false;clearTimeout(tipTimer);tipTimer=setTimeout(()=>{tip.hidden=true},5000)})}
+// how to keep the records: shown once, and from the guestbook any time
+function showKeep(){document.body.appendChild($('keep'));$('keep').hidden=false}
+$('keepOk').onclick=()=>{$('keep').hidden=true;store.set('kept',1)};
+$('gbHow').onclick=()=>{closeGb();showKeep()};
+document.body.appendChild($('gb'));document.body.appendChild($('knotTip'));
+
+/* ===== 함께 마신 차: every cup poured is counted in Supabase (cup_log), totals come from cup_stats() ===== */
+let cupStats={total:0,top:[]},cupsAt=0,cupTimer=null;
+function showCups(){$('cupTotal').textContent=cupStats.total.toLocaleString('ko-KR');$('cupChip').hidden=false;if(!$('rk').hidden)renderRank()}
+async function loadCups(){const c=gbClient();if(!c)return;cupsAt=Date.now();
+  try{const {data,error}=await c.rpc('cup_stats',{p_place:PLACE});if(error||!data)return;
+    const top=Array.isArray(data.top)?data.top.map(r=>({name:cleanText(String(r&&r.name||''),12).trim()||'손님',cups:Math.max(0,+r.cups|0)})).slice(0,10):[];
+    cupStats={total:Math.max(0,+data.total|0),top};showCups()}catch(e){}}
+function cupsChanged(){cupStats.total++;showCups();if(cupTimer)return;cupTimer=setTimeout(()=>{cupTimer=null;loadCups()},Math.max(3000,10000-(Date.now()-cupsAt)))}
+async function pourCup(tea){cupStats.total++;showCups();const c=gbClient();if(!c)return;
+  const device=String(store.get('id')||'').replace(/[^A-Za-z0-9_-]/g,'').slice(0,40);if(device.length<6)return;
+  try{const {error}=await c.from('cup_log').insert({place:PLACE,name:(me.name||'손님').slice(0,12),tea,device});if(!error){room&&room.cup&&room.cup();if(!cupTimer)cupTimer=setTimeout(()=>{cupTimer=null;loadCups()},4000)}}catch(e){}}
+setInterval(()=>{if(document.visibilityState==='visible'&&Date.now()-cupsAt>55000)loadCups()},20000);
+function renderRank(){$('rkTotal').textContent=cupStats.total.toLocaleString('ko-KR');
+  const mine=TEAS.reduce((a,t)=>a+(+REC.cups[t.k]||0),0),myName=(me.name||'').trim();
+  $('rkMine').innerHTML=`<b>${esc(myName||'손님')}</b> · 이 기기에서 마신 차 ${mine}잔`;
+  $('rkList').innerHTML=cupStats.top.length?cupStats.top.map((r,i)=>`<li class="${r.name===myName?'me':''}"><span class="no">${i+1}</span><span class="nm">${esc(r.name)}</span><span class="c">${r.cups.toLocaleString('ko-KR')}잔</span></li>`).join(''):'<li class="gb-empty" style="display:block">아직 아무도 차를 따르지 않았어요. 첫 잔을 따라 주세요.</li>'}
+$('cupChip').onclick=()=>{renderRank();$('rk').hidden=false;loadCups()};
+$('rkClose').onclick=()=>{$('rk').hidden=true};
+$('rk').addEventListener('click',e=>{if(e.target.id==='rk')$('rk').hidden=true});
+document.body.appendChild($('rk'));
+
 /* ===== 인증샷: a 3:4 photo of this moment, made and saved on this device only (nothing is uploaded) ===== */
 const visitTeas=[];   // teas poured into the 보듬이 this visit, in order
 function logTea(){const n=teaOf(me.tea).n;if(visitTeas[visitTeas.length-1]!==n)visitTeas.push(n)}
@@ -1326,7 +1536,7 @@ brewText();renderTags();
 /* ===== together, through Supabase Realtime: presence for who is here, broadcast for footsteps ===== */
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
-const APP_V='40';
+const APP_V='45';
 $('ver').textContent='v'+APP_V;
 function connectRoom(){
   // Presence only says who is here (tracked once per connection). Everything else rides broadcasts:
@@ -1360,6 +1570,8 @@ function connectRoom(){
     ch.on('broadcast',{event:'st'},({payload:p})=>{if(!p||typeof p.k!=='string'||p.k.length>40||p.k===myKey||typeof p.d!=='string'||p.d.length>2000)return;if(!allow(p.k,'s',6)||!peers[p.k]&&tooMany())return;
       let o;try{o=JSON.parse(p.d)}catch(e){return}if(!o||typeof o!=='object')return;
       o.name=typeof p.n==='string'?p.n.slice(0,12):'';const q=peer(p.k);q.st=o;q.stT=num(o.t);q.seen=Date.now();emit(false)});
+    ch.on('broadcast',{event:'cup'},({payload:p})=>{if(p&&typeof p.k==='string'&&p.k.length<=40&&p.k!==myKey&&allow(p.k,'c',1))cupsChanged()});
+    ch.on('broadcast',{event:'knot'},({payload:p})=>{if(p&&typeof p.k==='string'&&p.k.length<=40&&p.k!==myKey&&allow(p.k,'k',1))knotsChanged()});
     ch.on('broadcast',{event:'bye'},({payload:p})=>{if(p&&typeof p.k==='string'&&p.k!==myKey){delete peers[p.k];emit(false)}});
     ch.on('broadcast',{event:'pos'},({payload:p})=>{if(!p||typeof p.k!=='string'||p.k.length>40||p.k===myKey||!peers[p.k]||!allow(p.k,'p',20))return;
       const q=peer(p.k);q.pos={x:clamp(num(p.x),-30,30),z:clamp(num(p.z,15),-6,30),ry:num(p.ry),t:num(p.t)};q.seen=Date.now();emit(false)});
@@ -1380,7 +1592,9 @@ function connectRoom(){
         scheduleSt();return Promise.resolve()},
       onPeers(fn){cb=fn;emit(true);return()=>{cb=null}},
       flush(){if(stTimer){clearTimeout(stTimer);stTimer=null}sendSt(true)},
-      bye(){if(ready)ch.send({type:'broadcast',event:'bye',payload:{k:myKey}}).catch(()=>{})}
+      bye(){if(ready)ch.send({type:'broadcast',event:'bye',payload:{k:myKey}}).catch(()=>{})},
+      knot(){if(ready)ch.send({type:'broadcast',event:'knot',payload:{k:myKey}}).catch(()=>{})},
+      cup(){if(ready)ch.send({type:'broadcast',event:'cup',payload:{k:myKey}}).catch(()=>{})}
     };
     setInterval(()=>{if(ready)sendSt(true);emit(false)},4000);
     let settled=false;const to=setTimeout(()=>{if(!settled){settled=true;res(null)}},10000);
@@ -1401,6 +1615,8 @@ document.addEventListener('visibilitychange',()=>{if(!room)return;presence();roo
 addEventListener('pagehide',()=>{if(room&&room.bye)room.bye();try{readyUrl&&URL.revokeObjectURL(readyUrl)}catch(e){}});addEventListener('beforeunload',()=>{if(room&&room.bye)room.bye()});   // leaving for good: take the cushion with you
 async function enter(){
   renderTags();
+  {const fresh=markVisit(),n=REC.days.length;if(n>1&&fresh)brewText(`다시 오셨네요 · ${n}번째 찻자리예요`);setTimeout(()=>{if(brewNote&&brewNote.startsWith('다시 오셨네요'))brewText('')},9000)}
+  loadKnots();loadCups();if(!store.get('kept'))setTimeout(showKeep,1800);
   const r=await connectRoom();
   if(closed){r&&r.bye&&r.bye();return}
   if(!r){$('solo').hidden=false;return}
@@ -1418,7 +1634,7 @@ if(Date.now()>=OPEN_END)closeRoom();
 else if(me.name)enter();
 else{$('gate').hidden=false;setTimeout(()=>$('nick').focus(),300);
   $('gateForm').onsubmit=e=>{e.preventDefault();const n=$('nick').value.replace(/\s+/g,' ').trim().slice(0,12);if(!n){$('nick').focus();return}
-    me.name=n;store.set('nick',n);$('gate').hidden=true;renderTags();enter()}}
+    me.name=n;store.set('nick',n);store.set('kept',1);$('gate').hidden=true;renderTags();enter()}}
 })();
 </script>
 </body>
