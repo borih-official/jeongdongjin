@@ -59,6 +59,27 @@ body{background:#0d1520;color:var(--ink);font-family:var(--f-ko);font-weight:300
 .more[open]{display:grid;gap:6px}
 /* short screens (a phone with the browser bars showing): tighter panel so nothing is cut off */
 @media (max-height:700px){.bar{gap:6px;padding:8px 9px}.acts .btn{padding:6px 11px;font-size:12.5px}.say input{padding:9px 12px}.greets{max-height:13vh}.mine{font-size:11.5px}.teas .tea{padding-top:5px;padding-bottom:5px}}
+.bar{background:none!important;border:0!important;padding:0!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;gap:6px!important}
+.bar .line{display:flex;gap:8px;align-items:center;min-width:0}.bar .say{flex:1;min-width:0}
+.bar .say input{background:var(--glass);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.teapick{flex:none;display:flex;align-items:center;gap:6px;font-family:var(--f-ui);font-size:13px;color:var(--text);background:var(--paper);border:0;border-radius:999px;padding:10px 13px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+.teapick i{width:9px;height:9px;border-radius:50%}.teapick::after{content:'▾';font-size:10px;opacity:.6}
+.bar .teas{display:none;background:var(--glass-hi);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:16px;padding:8px;-webkit-mask-image:none;mask-image:none;flex-wrap:wrap}
+.bar.teas-open .teas{display:flex}
+.bar .mine{justify-content:center;text-shadow:0 1px 6px rgba(0,0,0,.6)}
+.bar .brewbar{margin:0 20%}
+.rail{position:fixed;right:max(10px,env(safe-area-inset-right,0px));top:52%;transform:translateY(-50%);z-index:30;display:flex;flex-direction:column;align-items:flex-end;gap:8px;pointer-events:auto;transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .35s;max-height:calc(100% - 220px);touch-action:pan-y}
+.rail .acts{display:flex;flex-direction:column;flex-wrap:nowrap;align-items:flex-end;gap:7px;overflow-y:auto;scrollbar-width:none;padding:2px}
+.rail .acts .btn{background:var(--glass);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);font-size:12.5px;padding:8px 14px;white-space:nowrap;box-shadow:0 3px 12px rgba(0,0,0,.2)}
+.rail .acts .btn.main{background:var(--sage,#5d7a5a)}
+.rail .acts .btn:disabled{display:none}
+.rail .acts .btn[aria-pressed="true"],.rail .acts .btn[aria-expanded="true"]{background:rgba(196,176,122,.55)}
+.rail-tuck{font-family:var(--f-ui);font-size:10.5px;color:var(--ink-mid);background:none;border:0;padding:2px 4px;cursor:pointer;text-shadow:0 1px 6px rgba(0,0,0,.6)}
+.rail.tucked{transform:translate(calc(100% + 24px),-50%);opacity:0;pointer-events:none}
+.rail-tab{position:fixed;right:0;top:52%;transform:translateY(-50%);z-index:30;width:22px;height:76px;border-radius:12px 0 0 12px;background:var(--glass-hi);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid var(--line);border-right:0;color:var(--ink);font-size:14px;cursor:pointer;pointer-events:auto}
+.setpop{position:fixed;right:max(10px,env(safe-area-inset-right,0px));top:52%;transform:translate(calc(-100% - 120px),-50%);z-index:31;display:grid;gap:8px;background:var(--glass-hi);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:16px;padding:12px 10px;width:min(300px,calc(100vw - 150px))}
+@media (max-width:480px){.setpop{left:12px;right:auto;transform:translateY(-50%);width:calc(100vw - 150px)}}
+body.cha .rail,body.cha .rail-tab,body.cha .teapick{opacity:0;pointer-events:none}
 .inapp-note{background:rgba(196,176,122,.16);border-radius:12px;padding:10px 12px;color:var(--ink)}
 .inapp-note .btn{display:block;margin:8px auto 0;font-size:13px}
 .g{display:flex;gap:8px;align-items:baseline;background:var(--glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:12px;padding:5px 11px;font-size:12.5px;line-height:1.55;min-width:0;opacity:.92}
@@ -269,28 +290,34 @@ body.cha .greets,body.cha .say,body.cha .mine,body.cha .labels,body.cha .side,bo
     <div class="greets" id="greets" aria-live="polite"></div>
     <button class="sitbtn" id="sitBtn" hidden>여기 앉기<small id="sitNo"></small></button>
     <div class="bar" id="bar">
-      <div class="grab" aria-hidden="true"><i></i></div>
-      <form class="say" id="say"><input id="greet" maxlength="60" autocomplete="off" placeholder="메시지 남기기"><button class="btn main" type="submit">남기기</button></form>
-      <div class="acts">
-        <button class="btn" id="myRec">내 기록</button>
-        <button class="btn" id="photo">사진</button>
-        <button class="btn" id="gbBtn">방명록</button>
-        <button class="btn main" id="brewBtn" hidden>차 우리기</button>
-        <button class="btn main" id="pourBtn" hidden disabled>보듬이에 따르기</button>
-        <button class="btn" id="sip" disabled>한 모금</button>
-        <button class="btn" id="cha" aria-pressed="false" disabled>차멍</button>
-        <button class="btn" id="stand" hidden>일어나기</button>
-        <button class="btn" id="waves" aria-pressed="false">명상 음악</button>
-      </div>
       <div class="mine"><span id="brewMsg">마당에 도착했어요</span></div>
-      <div class="teas" id="tea" role="radiogroup" aria-label="오늘의 차"></div>
       <div class="brewbar"><i id="brewbar"></i></div>
-      <details class="more" id="moreSet"><summary>화면 설정 · 하루 미리보기 · 가볍게 보기</summary>
-      <div class="pvrow"><label><input type="checkbox" id="pvOn"> 하루 미리보기</label><input type="range" id="pv" min="0" max="100" value="8" aria-label="미리보기 시각"><b id="pvT">--:--</b></div>
-      <div class="pvrow"><label><input type="checkbox" id="liteOn"> 가볍게 보기</label><span class="lite-note">버벅일 때 켜 주세요</span></div>
-      </details>
+      <div class="teas" id="tea" role="radiogroup" aria-label="오늘의 차"></div>
+      <div class="line"><button class="teapick" id="teaPick" type="button" aria-label="차 고르기"><i></i><span>녹차</span></button>
+      <form class="say" id="say"><input id="greet" maxlength="60" autocomplete="off" placeholder="메시지 남기기"><button class="btn main" type="submit">남기기</button></form></div>
       <div class="solo" id="solo" hidden>지금은 차실에 연결하지 못해 혼자 보는 화면이에요. 잠시 뒤 다시 들어와 주세요.</div>
     </div>
+  </div>
+  <!-- 오른쪽 세로 메뉴: 펼쳐 두고, 옆으로 밀거나 › 를 눌러 치움 -->
+  <div class="rail" id="rail">
+    <div class="acts">
+      <button class="btn main" id="brewBtn" hidden>차 우리기</button>
+      <button class="btn main" id="pourBtn" hidden disabled>보듬이에 따르기</button>
+      <button class="btn" id="sip" disabled>한 모금</button>
+      <button class="btn" id="cha" aria-pressed="false" disabled>차멍</button>
+      <button class="btn" id="myRec">내 기록</button>
+      <button class="btn" id="photo">사진</button>
+      <button class="btn" id="gbBtn">방명록</button>
+      <button class="btn" id="waves" aria-pressed="false">명상 음악</button>
+      <button class="btn" id="setBtn" type="button" aria-expanded="false">설정</button>
+      <button class="btn" id="stand" hidden>일어나기</button>
+    </div>
+    <button class="rail-tuck" id="railTuck" type="button" aria-label="메뉴 치우기">옆으로 치우기 ›</button>
+  </div>
+  <button class="rail-tab" id="railTab" type="button" aria-label="메뉴 펼치기" hidden>‹</button>
+  <div class="setpop" id="setPop" hidden>
+    <div class="pvrow"><label><input type="checkbox" id="pvOn"> 하루 미리보기</label><input type="range" id="pv" min="0" max="100" value="8" aria-label="미리보기 시각"><b id="pvT">--:--</b></div>
+    <div class="pvrow"><label><input type="checkbox" id="liteOn"> 가볍게 보기</label><span class="lite-note">버벅일 때 켜 주세요</span></div>
   </div>
 </div>
 
@@ -1121,7 +1148,7 @@ const teaOf=k=>TEAS.find(t=>t.k===k)||TEAS[0];
 // ripe pu-erh starts under 20 s and lengthens slowly; 발효차 starts at 20 s as the user set.
 const STEEPS={green:[10,15,20,30,45],white:[10,15,20,30,45],black:[10,15,20,30,45],oolong:[10,15,20,30,45],puer:[15,20,20,25,30,40,50]};
 function steepTime(k,n){const a=STEEPS[k];if(!a)return 60+(n-1)*15;return n<=a.length?a[n-1]:60}
-function renderTeas(){$('tea').innerHTML=TEAS.map(t=>`<button type="button" class="tea" role="radio" data-k="${t.k}" aria-checked="${t.k===me.tea}"><i style="background:${t.c}"></i>${t.n}</button>`).join('')}
+function renderTeas(){const t0=TEAS.find(t=>t.k===me.tea)||TEAS[0],tp=$('teaPick');if(tp)tp.innerHTML=`<i style="background:${t0.c}"></i><span>${t0.n}</span>`;$('tea').innerHTML=TEAS.map(t=>`<button type="button" class="tea" role="radio" data-k="${t.k}" aria-checked="${t.k===me.tea}"><i style="background:${t.c}"></i>${t.n}</button>`).join('')}
 renderTeas();
 function timer(sec){me.total=sec||0;me.until=sec?Date.now()+sec*1000:0}
 function startBrew(){me.steep=0;me.sk=0;me.drink=false;me.act=null;me.brew='idle';timer(0);presence();brewText()}
@@ -1167,7 +1194,7 @@ setInterval(()=>{
 },400);
 $('brewBtn').onclick=()=>{if(me.mode==='sit'&&me.brew==='idle'&&!me.act)startAct(me.steep===0?'cd2tp':'tb2tp')};   // new leaves for a fresh pot, then water
 $('pourBtn').onclick=()=>{if(me.mode==='sit'&&me.sk>0&&!me.act)startAct('sk2bd')};
-$('tea').onclick=e=>{const b=e.target.closest('.tea');if(!b||b.dataset.k===me.tea)return;me.tea=b.dataset.k;store.set('tea2',me.tea);renderTeas();if(me.mode==='sit')startBrew();else presence()};
+$('tea').onclick=e=>{const b=e.target.closest('.tea');if(!b||b.dataset.k===me.tea)return;me.tea=b.dataset.k;store.set('tea2',me.tea);renderTeas();$('bar').classList.remove('teas-open');if(me.mode==='sit')startBrew();else presence()};
 
 /* ===== presence ===== */
 function presence(){if(!room)return;room.presence({away:document.hidden?1:0,name:me.name,color:me.color,bowl:me.bowl,x:+me.x.toFixed(2),z:+me.z.toFixed(2),ry:+me.ry.toFixed(2),mode:me.mode,seat:me.seat,
@@ -1716,20 +1743,19 @@ async function toggleCha(on){
 $('cha').onclick=()=>toggleCha();
 
 /* ===== bottom panel: swipe down to tuck away, swipe up to bring back ===== */
-const bottomEl=document.querySelector('.bottom'),barEl=$('bar'),PEEK=26;
-let sheetDown=false,sheetDrag=null;
-const sheetMax=()=>Math.max(0,barEl.offsetHeight-PEEK);
-function applySheet(extra=0,anim=true){bottomEl.style.transition=anim?'transform .38s cubic-bezier(.2,.8,.2,1)':'none';bottomEl.style.transform=`translateY(${clamp((sheetDown?sheetMax():0)+extra,0,sheetMax())}px)`}
-barEl.addEventListener('pointerdown',e=>{if(e.target.closest('input,button,select,label,form,summary,details'))return;sheetDrag={y:e.clientY,t:performance.now()};try{barEl.setPointerCapture(e.pointerId)}catch(_){}});
-barEl.addEventListener('pointermove',e=>{if(sheetDrag)applySheet(e.clientY-sheetDrag.y,false)});
-const sheetEnd=e=>{if(!sheetDrag)return;const dy=e.clientY-sheetDrag.y,fast=Math.abs(dy)/(performance.now()-sheetDrag.t+1)>.5;sheetDrag=null;
-  if(Math.abs(dy)<6)sheetDown=!sheetDown;else if(fast)sheetDown=dy>0;else sheetDown=(sheetDown?sheetMax():0)+dy>sheetMax()/2;
-  if(sheetDown)document.activeElement&&document.activeElement.blur&&document.activeElement.blur();applySheet()};
-barEl.addEventListener('pointerup',sheetEnd);barEl.addEventListener('pointercancel',sheetEnd);
-addEventListener('resize',()=>applySheet(0,false));
-if(innerHeight<520&&innerWidth>innerHeight)sheetDown=true;
+// 오른쪽 세로 메뉴: open from the start; swipe it right or tap › to tuck it away, tap or swipe the ‹ tab to bring it back
+{const rail=$('rail'),tab=$('railTab'),pop=$('setPop');let dn=null;
+  const tuck=t=>{rail.classList.toggle('tucked',t);tab.hidden=!t;if(t){pop.hidden=true;$('setBtn').setAttribute('aria-expanded','false')}};
+  $('railTuck').onclick=()=>tuck(true);tab.onclick=()=>tuck(false);
+  rail.addEventListener('pointerdown',e=>{dn={x:e.clientX,y:e.clientY}});
+  rail.addEventListener('pointerup',e=>{if(dn&&e.clientX-dn.x>40&&Math.abs(e.clientY-dn.y)<60)tuck(true);dn=null});
+  tab.addEventListener('pointerdown',e=>{dn={x:e.clientX}});tab.addEventListener('pointerup',e=>{if(dn&&dn.x-e.clientX>20)tuck(false);dn=null});
+  $('setBtn').onclick=()=>{pop.hidden=!pop.hidden;$('setBtn').setAttribute('aria-expanded',String(!pop.hidden))};
+  document.addEventListener('pointerdown',e=>{if(!pop.hidden&&!e.target.closest('#setPop,#setBtn'))pop.hidden=true;
+    if($('bar').classList.contains('teas-open')&&!e.target.closest('#tea,#teaPick'))$('bar').classList.remove('teas-open')});
+  $('teaPick').onclick=()=>$('bar').classList.toggle('teas-open');
+  document.body.appendChild(pop)}
 if(IN_APP){const n=$('inappNote');n.hidden=false;n.innerHTML=KAKAO?'카카오톡 안에서는 화면 아래가 가려지고 기록이 이어지지 않아요.<button class="btn main" type="button" id="goOut">사파리(기본 브라우저)로 열기</button>':'이 앱 안에서는 화면 아래가 가려지고 기록이 이어지지 않아요.<br>오른쪽 위 메뉴(··· )에서 <b>브라우저로 열기</b>를 눌러 주세요.';const g=$('goOut');if(g)g.onclick=openOutside}   // phone held sideways: start with the panel tucked away
-requestAnimationFrame(()=>applySheet(0,false));
 
 /* ===== arrive in the yard, facing the door ===== */
 brewText();renderTags();
@@ -1739,7 +1765,7 @@ let sbOne=null;function sbClient(){if(sbOne)return sbOne;if(!window.supabase)ret
   try{sbOne=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},realtime:{params:{eventsPerSecond:10}}})}catch(e){sbOne=null}return sbOne}
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
-const APP_V='77';
+const APP_V='78';
 $('ver').textContent='v'+APP_V;
 function connectRoom(){
   // Presence only says who is here (tracked once per connection). Everything else rides broadcasts:
