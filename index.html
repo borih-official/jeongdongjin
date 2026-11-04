@@ -150,6 +150,7 @@ body.cha .greets,body.cha .say,body.cha .mine,body.cha .labels,body.cha .side,bo
 .gb-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .gb-sub{font-family:var(--f-ko);font-size:13px;color:var(--ink-mid);margin-top:4px}
 .gb-story{margin:0;font-family:var(--f-ko);font-size:13.5px;line-height:1.85;color:var(--ink-mid);word-break:keep-all}
+.mr-body{font-size:14px!important;line-height:1.9!important;padding:14px 16px!important}
 .gb-mine{font-family:var(--f-ui);font-size:12px;line-height:1.7;color:var(--ink-mid);background:rgba(243,239,230,.06);border-radius:12px;padding:10px 12px}
 .gb-mine b{color:var(--barley);font-weight:500}
 .gb-form{display:flex;gap:8px;min-width:0}
@@ -220,14 +221,18 @@ body.cha .greets,body.cha .say,body.cha .mine,body.cha .labels,body.cha .side,bo
     <div class="gb-head"><div><div class="logo">함께 마신 차</div><div class="gb-sub">정동진 보리 차실에서 보듬이에 따른 잔</div></div><button class="btn" id="rkClose" type="button">닫기</button></div>
     <div class="rk-total"><span id="rkTotal">0</span><small>잔</small></div>
     <div class="gb-mine" id="rkMine"></div>
-    <div class="gb-sub rk-head">보리 차벗 <span id="rkToday"></span></div>
+    <div class="gb-sub rk-head">보리 차벗 <span id="rkToday">그동안 쌓인 찻잔</span></div>
     <ol class="rk-list" id="rkList"></ol>
     <p class="gb-note">보리 차실에서 쌓인 찻잔이 많은 차벗부터 보여요 · 같은 이름은 함께 세어요 · 다음 일출 차실에서도 이어져요</p>
+  </div></div>
+  <div class="gb" id="mr" hidden><div class="gb-card" role="dialog" aria-label="내 기록">
+    <div class="gb-head"><div><div class="logo">내 기록</div><div class="gb-sub">이 기기 · 이 브라우저에 쌓인 나의 찻자리</div></div><button class="btn" id="mrClose" type="button">닫기</button></div>
+    <div class="gb-mine mr-body" id="mrBody"></div>
+    <button class="gb-link" id="mrHow" type="button">기록 이어가기 안내</button>
   </div></div>
   <div class="gb" id="gb" hidden><div class="gb-card" role="dialog" aria-label="다정 나무 방명록">
     <div class="gb-head"><div><div class="logo">다정 나무</div><div class="gb-sub">정동진 보리 차실 방명록 · 남긴 한 줄은 다정 나무에 카드로 걸려요</div></div><button class="btn" id="gbClose" type="button">닫기</button></div>
     <p class="gb-story">다정(茶情) 나무는 차로 나눈 정이 매달리는 나무예요. 같은 아침, 같은 바다 앞에서 차를 마신 사람들이 남긴 한 줄이 작은 카드가 되어 가지에 걸려요. 바람이 불면 카드가 흔들리고, 다음에 온 누군가가 그 마음을 읽고 가요.</p>
-    <div class="gb-mine" id="gbMine"></div>
     <form class="gb-form" id="gbForm"><input id="gbMsg" maxlength="80" autocomplete="off" placeholder="한 줄 남기기" aria-label="방명록 한 줄"><button class="btn main" type="submit" id="gbTie">걸기</button></form>
     <p class="gb-note" id="gbNote">이름과 남긴 말은 누구나 볼 수 있어요 · 링크는 걸 수 없어요</p>
     <ol class="gb-list" id="gbList"></ol>
@@ -252,7 +257,7 @@ body.cha .greets,body.cha .say,body.cha .mine,body.cha .labels,body.cha .side,bo
       <div class="grab" aria-hidden="true"><i></i></div>
       <form class="say" id="say"><input id="greet" maxlength="60" autocomplete="off" placeholder="메시지 남기기"><button class="btn main" type="submit">남기기</button></form>
       <div class="acts">
-        <button class="btn" id="bow">인사</button>
+        <button class="btn" id="myRec">내 기록</button>
         <button class="btn" id="photo">사진</button>
         <button class="btn" id="gbBtn">방명록</button>
         <button class="btn main" id="brewBtn" hidden>차 우리기</button>
@@ -1156,7 +1161,7 @@ function sipped(){
   if(me.cup<=.001){me.cup=0;me.drink=false;brewText()}   // the bowl is empty: set it down, pour another from the 숙우 or brew again
   presenceSoon()}
 function emote(k){me.emote=k;me.emoteAt=Date.now();emotes.set('me',{k,at:performance.now()});presence()}
-$('bow').onclick=()=>emote('bow');$('sip').onclick=()=>emote('sip');
+$('sip').onclick=()=>emote('sip');
 
 const ACTS=['cd2tp','tb2tp','tp2sk','sk2bd'],BREWS=['idle','steep','ready'],HEX=/^#[0-9a-f]{6}$/i;
 const cleanText=(t,n)=>typeof t==='string'?t.replace(/https?:\/\/\S+|www\.\S+/gi,'').replace(/[\u0000-\u001f\u200b-\u200f\u202a-\u202e]/g,'').slice(0,n):'';
@@ -1348,16 +1353,16 @@ const p2=n=>String(n).padStart(2,'0');
 const dayKey=t=>{const d=kst(t);return `${d.getUTCFullYear()}-${p2(d.getUTCMonth()+1)}-${p2(d.getUTCDate())}`};
 const REC=(()=>{let r=store.get('rec');if(!r||typeof r!=='object')r={};
   r.days=Array.isArray(r.days)?r.days.filter(d=>typeof d==='string'&&/^\d{4}-\d\d-\d\d$/.test(d)).slice(-400):[];
-  r.cups=r.cups&&typeof r.cups==='object'?r.cups:{};r.stamps=r.stamps&&typeof r.stamps==='object'?r.stamps:{};return r})();
+  r.cups=r.cups&&typeof r.cups==='object'?r.cups:{};r.stamps=r.stamps&&typeof r.stamps==='object'?r.stamps:{};r.today=r.today&&typeof r.today==='object'&&typeof r.today.d==='string'?{d:r.today.d,n:Math.max(0,+r.today.n|0)}:{d:'',n:0};return r})();
 const saveRec=()=>store.set('rec',REC);
 function markVisit(){const d=dayKey(Date.now()),fresh=REC.days[REC.days.length-1]!==d;if(fresh)REC.days.push(d);if(!REC.stamps[PLACE])REC.stamps[PLACE]=d;saveRec();return fresh}
-function countCup(){const k=TEAS.some(t=>t.k===me.tea)?me.tea:TEAS[0].k;REC.cups[k]=(+REC.cups[k]||0)+1;saveRec();pourCup(k)}
-function recSummary(){const n=REC.days.length,cups=TEAS.filter(t=>+REC.cups[t.k]>0).map(t=>`${t.n} ${REC.cups[t.k]}잔`).join(' · ');
+function countCup(){const k=TEAS.some(t=>t.k===me.tea)?me.tea:TEAS[0].k;REC.cups[k]=(+REC.cups[k]||0)+1;const d=dayKey(Date.now());if(REC.today.d!==d)REC.today={d,n:0};REC.today.n++;saveRec();pourCup(k)}
+function recSummary(){const n=REC.days.length,todayN=REC.today.d===dayKey(Date.now())?REC.today.n:0,allN=TEAS.reduce((a,t)=>a+(+REC.cups[t.k]||0),0),cups=TEAS.filter(t=>+REC.cups[t.k]>0).map(t=>`${t.n} ${REC.cups[t.k]}잔`).join(' · ');
   const st=Object.keys(REC.stamps).map(k=>`${esc(k)} ${esc(String(REC.stamps[k]).slice(5).replace('-','.'))}`).join(' · ');
   const drunk=Math.floor(me.sips/SIPS_PER_CUP),steps=[[BUD_AT,'꽃봉오리'],[BLOOM_AT,'금빛 꽃'],[DUSK_AT,'노을빛 꽃'],[DAWN_AT,'새벽빛 꽃'],[EAR_AT,'이삭']];
   const now=steps.filter(([a])=>me.sips>=a).pop(),next=steps.find(([a])=>me.sips<a);
   const head=`머리 위 · ${now?now[1]:'새싹'} (${drunk}잔)${next?` · ${next[1]}까지 ${Math.ceil((next[0]-me.sips)/SIPS_PER_CUP)}잔`:''}`;
-  return `<b>${esc(me.name||'손님')}</b> · ${n>1?`${n}번째 찻자리`:"첫 찻자리"}<br>${head}<br>마신 차 · ${cups||'아직 없어요'}<br>해돋이 순례 도장 · ${st||'정동진'}`}
+  return `<b>${esc(me.name||'손님')}</b> · ${n>1?`${n}번째 찻자리`:"첫 찻자리"}<br>${head}<br>오늘 마신 차 · ${todayN?`${todayN}잔`:'아직 없어요'}<br>그동안 쌓인 찻잔 · ${allN?`${allN}잔 (${cups})`:'아직 없어요'}<br>해돋이 순례 도장 · ${st||'정동진'}`}
 
 /* ===== 다정 나무 방명록: shared, kept in Supabase (table guestbook: write and read only, never edit) ===== */
 let gbSb=null;
@@ -1380,7 +1385,7 @@ async function moreKnots(){const c=gbClient();if(!c||gbBusy)return;gbBusy=true;$
   try{const {data,error}=await c.from('guestbook').select(gbSelect).eq('place',PLACE).order('created_at',{ascending:false}).range(gbOffset,gbOffset+29);
     if(!error&&Array.isArray(data))renderList(data.map(cleanKnot).filter(Boolean),false)}catch(e){}
   gbBusy=false;$('gbMore').textContent='더 보기'}
-function openGb(){$('gbMine').innerHTML=recSummary();renderList(knots,true);$('gb').hidden=false;loadKnots()}
+function openGb(){renderList(knots,true);$('gb').hidden=false;loadKnots()}
 const closeGb=()=>{$('gb').hidden=true};
 $('gbBtn').onclick=openGb;$('gbClose').onclick=closeGb;$('gbMore').onclick=moreKnots;
 $('gb').addEventListener('click',e=>{if(e.target.id==='gb')closeGb()});
@@ -1414,6 +1419,11 @@ $('gbForm').onsubmit=async e=>{e.preventDefault();if(gbBusy)return;
 function showKeep(){document.body.appendChild($('keep'));$('keep').hidden=false}
 $('keepOk').onclick=()=>{$('keep').hidden=true;store.set('kept',1)};
 $('gbHow').onclick=()=>{closeGb();showKeep()};
+$('myRec').onclick=()=>{$('mrBody').innerHTML=recSummary();$('mr').hidden=false};
+$('mrClose').onclick=()=>{$('mr').hidden=true};
+$('mr').addEventListener('click',e=>{if(e.target.id==='mr')$('mr').hidden=true});
+$('mrHow').onclick=()=>{$('mr').hidden=true;showKeep()};
+document.body.appendChild($('mr'));
 document.body.appendChild($('gb'));document.body.appendChild($('knotTip'));document.body.appendChild($('treeGo'));
 // 다정 나무 보러 가기: walking in the yard, a button points the way; tapping it walks you to the sign and reads it out
 let glide=null;const signPos=new THREE.Vector3(),signN=new THREE.Vector3(),qW=new THREE.Quaternion(),projV=new THREE.Vector3();
@@ -1455,7 +1465,7 @@ let cupStats={total:0,today:0,top:[]},cupsAt=0,cupTimer=null;
 function showCups(){$('cupTotal').textContent=cupStats.total.toLocaleString('ko-KR');$('cupChip').hidden=false;if(!$('rk').hidden)renderRank()}
 async function loadCups(){const c=gbClient();if(!c)return;cupsAt=Date.now();
   try{const {data,error}=await c.rpc('cup_stats',{p_place:PLACE});if(error||!data)return;
-    const top=Array.isArray(data.top)?data.top.map(r=>({name:cleanText(String(r&&r.name||''),12).trim()||'손님',cups:Math.max(0,+r.cups|0)})).slice(0,10):[];
+    const top=Array.isArray(data.top)?data.top.map(r=>({name:cleanText(String(r&&r.name||''),12).trim()||'손님',cups:Math.max(0,+r.cups|0)})).slice(0,300):[];
     cupStats={total:Math.max(0,+data.total|0),today:Math.max(0,+data.today|0),top};showCups()}catch(e){}}
 function cupsChanged(){cupStats.total++;showCups();if(cupTimer)return;cupTimer=setTimeout(()=>{cupTimer=null;loadCups()},Math.max(3000,10000-(Date.now()-cupsAt)))}
 async function pourCup(tea){cupStats.total++;showCups();const c=gbClient();if(!c)return;
@@ -1465,7 +1475,7 @@ setInterval(()=>{if(document.visibilityState==='visible'&&Date.now()-cupsAt>5500
 function renderRank(){$('rkTotal').textContent=cupStats.total.toLocaleString('ko-KR');
   const mine=TEAS.reduce((a,t)=>a+(+REC.cups[t.k]||0),0),myName=(me.name||'').trim();
   $('rkMine').innerHTML=`<b>${esc(myName||'손님')}</b> · 이 기기에서 마신 차 ${mine}잔`;
-  $('rkToday').textContent=cupStats.today?`오늘 ${cupStats.today.toLocaleString('ko-KR')}잔`:'';
+  
   // 보리 차벗: every cup in every BORIH tea room, by name, most first, no ranks or numbers
   $('rkList').innerHTML=cupStats.top.length?cupStats.top.map(r=>`<li class="${r.name===myName?'me':''}"><span class="nm">${esc(r.name)}</span><span class="c">${r.cups.toLocaleString('ko-KR')}잔</span></li>`).join(''):'<li class="gb-empty" style="display:block">아직 아무도 차를 따르지 않았어요. 첫 잔을 따라 주세요.</li>'}
 $('cupChip').onclick=()=>{renderRank();$('rk').hidden=false;loadCups()};
@@ -1694,7 +1704,7 @@ let sbOne=null;function sbClient(){if(sbOne)return sbOne;if(!window.supabase)ret
   try{sbOne=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},realtime:{params:{eventsPerSecond:10}}})}catch(e){sbOne=null}return sbOne}
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
-const APP_V='68';
+const APP_V='71';
 $('ver').textContent='v'+APP_V;
 function connectRoom(){
   // Presence only says who is here (tracked once per connection). Everything else rides broadcasts:
