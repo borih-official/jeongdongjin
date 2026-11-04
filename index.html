@@ -1358,12 +1358,14 @@ const REC=(()=>{let r=store.get('rec');if(!r||typeof r!=='object')r={};
 const saveRec=()=>store.set('rec',REC);
 function markVisit(){const d=dayKey(Date.now()),fresh=REC.days[REC.days.length-1]!==d;if(fresh)REC.days.push(d);if(!REC.stamps[PLACE])REC.stamps[PLACE]=d;saveRec();return fresh}
 function countCup(){const k=TEAS.some(t=>t.k===me.tea)?me.tea:TEAS[0].k;REC.cups[k]=(+REC.cups[k]||0)+1;const d=dayKey(Date.now());if(REC.today.d!==d)REC.today={d,n:0};REC.today.n++;saveRec();pourCup(k)}
+// 첫 날, 두 번째 날 … 열 번째 날, then 11번째 날
+const dayNth=n=>n<=1?'첫 날':(['','','두','세','네','다섯','여섯','일곱','여덟','아홉','열'][n]?`${['','','두','세','네','다섯','여섯','일곱','여덟','아홉','열'][n]} 번째 날`:`${n}번째 날`);
 function recSummary(){const n=REC.days.length,todayN=REC.today.d===dayKey(Date.now())?REC.today.n:0,allN=TEAS.reduce((a,t)=>a+(+REC.cups[t.k]||0),0),cups=TEAS.filter(t=>+REC.cups[t.k]>0).map(t=>`${t.n} ${REC.cups[t.k]}잔`).join(' · ');
   const st=Object.keys(REC.stamps).map(k=>`${esc(k)} ${esc(String(REC.stamps[k]).slice(5).replace('-','.'))}`).join(' · ');
   const drunk=Math.floor(me.sips/SIPS_PER_CUP),steps=[[BUD_AT,'꽃봉오리'],[BLOOM_AT,'금빛 꽃'],[DUSK_AT,'노을빛 꽃'],[DAWN_AT,'새벽빛 꽃'],[EAR_AT,'이삭']];
   const now=steps.filter(([a])=>me.sips>=a).pop(),next=steps.find(([a])=>me.sips<a);
   const head=`머리 위 · ${now?now[1]:'새싹'} (${drunk}잔)${next?` · ${next[1]}까지 ${Math.ceil((next[0]-me.sips)/SIPS_PER_CUP)}잔`:''}`;
-  return `<b>${esc(me.name||'손님')}</b> · ${n>1?`${n}번째 찻자리`:"첫 찻자리"}<br>${head}<br>오늘 마신 차 · ${todayN?`${todayN}잔`:'아직 없어요'}<br>그동안 쌓인 찻잔 · ${allN?`${allN}잔 (${cups})`:'아직 없어요'}<br>해돋이 순례 도장 · ${st||'정동진'}`}
+  return `<b>${esc(me.name||'손님')}</b> · ${dayNth(n)}의 찻자리<br>${head}<br>오늘 마신 차 · ${todayN?`${todayN}잔`:'아직 없어요'}<br>그동안 쌓인 찻잔 · ${allN?`${allN}잔 (${cups})`:'아직 없어요'}<br>해돋이 순례 도장 · ${st||'정동진'}`}
 
 /* ===== 다정 나무 방명록: shared, kept in Supabase (table guestbook: write and read only, never edit) ===== */
 let gbSb=null;
@@ -1705,7 +1707,7 @@ let sbOne=null;function sbClient(){if(sbOne)return sbOne;if(!window.supabase)ret
   try{sbOne=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},realtime:{params:{eventsPerSecond:10}}})}catch(e){sbOne=null}return sbOne}
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
-const APP_V='73';
+const APP_V='74';
 $('ver').textContent='v'+APP_V;
 function connectRoom(){
   // Presence only says who is here (tracked once per connection). Everything else rides broadcasts:
@@ -1784,7 +1786,7 @@ document.addEventListener('visibilitychange',()=>{if(!room)return;presence();roo
 addEventListener('pagehide',()=>{if(room&&room.bye)room.bye();try{readyUrl&&URL.revokeObjectURL(readyUrl)}catch(e){}});addEventListener('beforeunload',()=>{if(room&&room.bye)room.bye()});   // leaving for good: take the cushion with you
 async function enter(){
   renderTags();
-  {const fresh=markVisit(),n=REC.days.length;if(n>1&&fresh)brewText(`다시 오셨네요 · ${n}번째 찻자리예요`);setTimeout(()=>{if(brewNote&&brewNote.startsWith('다시 오셨네요'))brewText('')},9000)}
+  {const fresh=markVisit(),n=REC.days.length;if(n>1&&fresh)brewText(`다시 오셨네요 · ${dayNth(n)}의 찻자리예요`);setTimeout(()=>{if(brewNote&&brewNote.startsWith('다시 오셨네요'))brewText('')},9000)}
   loadKnots();loadCups();if(!store.get('kept'))setTimeout(showKeep,1800);
   const r=await connectRoom();
   if(closed){r&&r.bye&&r.bye();return}
