@@ -79,7 +79,10 @@ body{background:#0d1520;color:var(--ink);font-family:var(--f-ko);font-weight:300
 .rail-tab{position:fixed;right:0;top:52%;transform:translateY(-50%);z-index:30;width:22px;height:76px;border-radius:12px 0 0 12px;background:var(--glass-hi);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid var(--line);border-right:0;color:var(--ink);font-size:14px;cursor:pointer;pointer-events:auto}
 .setpop{position:fixed;right:max(10px,env(safe-area-inset-right,0px));top:52%;transform:translate(calc(-100% - 120px),-50%);z-index:31;display:grid;gap:8px;background:var(--glass-hi);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:16px;padding:12px 10px;width:min(300px,calc(100vw - 150px))}
 @media (max-width:480px){.setpop{left:12px;right:auto;transform:translateY(-50%);width:calc(100vw - 150px)}}
-body.cha .rail,body.cha .rail-tab,body.cha .teapick{opacity:0;pointer-events:none}
+body.cha .rail-tab,body.cha .teapick,body.cha .rail-tuck{opacity:0;pointer-events:none}
+body.cha .rail .acts .btn:not(#cha){display:none}
+body.cha .rail.tucked{transform:translateY(-50%);opacity:1;pointer-events:auto}
+body.cha #cha{opacity:.55}
 .dol-tip{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 150px);transform:translateX(-50%);z-index:35;font-family:var(--f-ui);font-size:12.5px;color:var(--text);background:var(--paper);border-radius:999px;padding:7px 14px;box-shadow:0 6px 20px rgba(0,0,0,.3);pointer-events:none;animation:rise .35s ease-out;white-space:nowrap}
 .inapp-note{background:rgba(196,176,122,.16);border-radius:12px;padding:10px 12px;color:var(--ink)}
 .inapp-note .btn{display:block;margin:8px auto 0;font-size:13px}
@@ -166,7 +169,17 @@ body.cha .homebtn{opacity:0;pointer-events:none}
 .side .btn,.preview{background:var(--glass);font-size:12px;padding:6px 12px}
 .preview{font-family:var(--f-ui);color:var(--ink-mid);display:flex;align-items:center;gap:6px;border-radius:999px}
 .preview input[type=range]{width:90px;accent-color:var(--barley)}
-.breath{position:fixed;left:0;right:0;top:40%;text-align:center;font-size:16px;letter-spacing:.35em;opacity:0;transition:opacity 1.6s;pointer-events:none;text-shadow:0 1px 12px rgba(0,0,0,.5)}
+.breath{position:fixed;left:0;right:0;top:40%;height:60px;text-align:center;font-size:16px;letter-spacing:.35em;opacity:0;transition:opacity 1.6s;pointer-events:none;text-shadow:0 1px 12px rgba(0,0,0,.5)}
+/* one breath = 4 s in, 6 s out, looping for as long as 차멍 lasts */
+.breath span{position:absolute;left:0;right:0;top:18px;opacity:0}
+body.cha .breath .b-in{animation:bIn 10s ease-in-out infinite}
+body.cha .breath .b-out{animation:bOut 10s ease-in-out infinite}
+.breath .ring{position:absolute;left:50%;top:30px;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:1px solid rgba(245,241,235,.35);transform:scale(.55)}
+body.cha .breath .ring{animation:bRing 10s ease-in-out infinite}
+@keyframes bIn{0%{opacity:0}6%{opacity:1}36%{opacity:1}42%{opacity:0}100%{opacity:0}}
+@keyframes bOut{0%,38%{opacity:0}46%{opacity:1}92%{opacity:1}100%{opacity:0}}
+@keyframes bRing{0%{transform:scale(.55);opacity:.5}40%{transform:scale(1);opacity:.9}100%{transform:scale(.55);opacity:.5}}
+@media (prefers-reduced-motion:reduce){body.cha .breath .ring{animation:none}}
 body.cha .breath{opacity:.9}
 .greets,.say,.mine,.labels,.side,.hint{transition:opacity 1.2s}
 body.cha .greets,body.cha .say,body.cha .mine,body.cha .labels,body.cha .side,body.cha .hint,body.cha .pvrow{opacity:0;pointer-events:none}
@@ -241,7 +254,7 @@ body.cha .greets,body.cha .say,body.cha .mine,body.cha .labels,body.cha .side,bo
 </div>
 <div class="labels" id="labels"></div>
 <div class="joy" id="joy" hidden><i id="knob"></i></div>
-<div class="breath" id="breath">들이쉬고</div>
+<div class="breath" id="breath" aria-live="off"><i class="ring"></i><span class="b-in">들이쉬고</span><span class="b-out">내쉬고</span></div>
 
 <div class="hud">
   <div style="display:grid">
@@ -1360,9 +1373,9 @@ function updateCam(){
   cam.position.y=Math.max(cam.position.y,.5);
   const f=leafFocus();
   if(f>0){const st=seats[me.seat];st.cd.getWorldPosition(fA);st.tp.getWorldPosition(fB);fT.copy(fA).lerp(fB,.5);fT.y+=.06;
-    fP.set(fT.x-1.05,fT.y+.78,fT.z+.78);   // beside the left shoulder (the tumbler stands on the right), looking down at the hands
-    // swing out to the side first and come down after, so the view goes around the head rather than through it
-    const wx=Math.sqrt(f),wz=f*f;cam.position.set(cam.position.x+(fP.x-cam.position.x)*wx,cam.position.y+(fP.y-cam.position.y)*f+Math.sin(f*Math.PI)*.25,cam.position.z+(fP.z-cam.position.z)*wz);
+    fP.set(fT.x+.28,fT.y+.5,fT.z-1.05);   // almost straight in front, across the table, a touch to the right: hands, caddy and 다관 face on
+    // go round the right side of the one sitting (out wide, then forward), never through them or the table
+    const sw=Math.sin(f*Math.PI)*1.7;cam.position.set(cam.position.x+(fP.x-cam.position.x)*f+sw,cam.position.y+(fP.y-cam.position.y)*f+Math.sin(f*Math.PI)*.35,cam.position.z+(fP.z-cam.position.z)*f);
     fA.copy(tgt).lerp(fT,f);cam.lookAt(fA)}
   else cam.lookAt(tgt);
   sky.position.copy(cam.position);starPts.position.copy(cam.position);
@@ -1818,7 +1831,8 @@ let wake=null,bT=null;
 async function toggleCha(on){
   if(on===undefined)on=!document.body.classList.contains('cha');
   document.body.classList.toggle('cha',on);$('cha').setAttribute('aria-pressed',on);clearTimeout(bT);
-  if(on){Object.assign(camT,{th:0,el:.22,r:3.8});try{wake=await navigator.wakeLock?.request('screen')}catch(e){}let inh=true;const step=()=>{$('breath').textContent=inh?'들이쉬고':'내쉬고';bT=setTimeout(step,inh?4000:6000);inh=!inh};step()}
+  if(on){Object.assign(camT,{th:0,el:.22,r:3.8});const b=$('breath');b.style.display='none';void b.offsetWidth;b.style.display='';   // restart the breath from 들이쉬고
+    try{navigator.wakeLock&&navigator.wakeLock.request('screen').then(w=>{wake=w}).catch(()=>{})}catch(e){}}
   else{try{wake&&wake.release()}catch(e){}wake=null}
 }
 $('cha').onclick=()=>toggleCha();
@@ -1846,7 +1860,7 @@ let sbOne=null;function sbClient(){if(sbOne)return sbOne;if(!window.supabase)ret
   try{sbOne=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},realtime:{params:{eventsPerSecond:10}}})}catch(e){sbOne=null}return sbOne}
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
-const APP_V='83';
+const APP_V='85';
 $('ver').textContent='v'+APP_V;
 function connectRoom(){
   // Presence only says who is here (tracked once per connection). Everything else rides broadcasts:
