@@ -80,6 +80,7 @@ body{background:#0d1520;color:var(--ink);font-family:var(--f-ko);font-weight:300
 .setpop{position:fixed;right:max(10px,env(safe-area-inset-right,0px));top:52%;transform:translate(calc(-100% - 120px),-50%);z-index:31;display:grid;gap:8px;background:var(--glass-hi);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:16px;padding:12px 10px;width:min(300px,calc(100vw - 150px))}
 @media (max-width:480px){.setpop{left:12px;right:auto;transform:translateY(-50%);width:calc(100vw - 150px)}}
 body.cha .rail,body.cha .rail-tab,body.cha .teapick{opacity:0;pointer-events:none}
+.dol-tip{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 150px);transform:translateX(-50%);z-index:35;font-family:var(--f-ui);font-size:12.5px;color:var(--text);background:var(--paper);border-radius:999px;padding:7px 14px;box-shadow:0 6px 20px rgba(0,0,0,.3);pointer-events:none;animation:rise .35s ease-out;white-space:nowrap}
 .inapp-note{background:rgba(196,176,122,.16);border-radius:12px;padding:10px 12px;color:var(--ink)}
 .inapp-note .btn{display:block;margin:8px auto 0;font-size:13px}
 .g{display:flex;gap:8px;align-items:baseline;background:var(--glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:12px;padding:5px 11px;font-size:12.5px;line-height:1.55;min-width:0;opacity:.92}
@@ -252,6 +253,7 @@ body.cha .greets,body.cha .say,body.cha .mine,body.cha .labels,body.cha .side,bo
   </div>
   <div class="flash" id="flash"></div>
   <div class="knot-tip" id="knotTip" hidden></div>
+  <div class="dol-tip" id="dolTip" hidden>저 멀리 참돌고래가 뛰었어요 🐬</div>
   <button class="treego" id="treeGo" type="button" hidden><span class="tg-l">다정 나무 보러 가기</span><span class="tg-a" aria-hidden="true">→</span></button>
   <div class="gb" id="rk" hidden><div class="gb-card" role="dialog" aria-label="함께 마신 차">
     <div class="gb-head"><div><div class="logo">함께 마신 차</div><div class="gb-sub">정동진 보리 차실에서 보듬이에 따른 잔</div></div><button class="btn" id="rkClose" type="button">닫기</button></div>
@@ -580,6 +582,71 @@ const knotTree=(()=>{const g=new THREE.Group();g.position.set(KNOT_TREE.x,GROUND
       if(strips.instanceColor)strips.instanceColor.needsUpdate=true;if(leaves.instanceColor)leaves.instanceColor.needsUpdate=true;place(performance.now())},
     night,tick(t){if(n)place(t)}}})();
 
+/* ===== 참돌고래 (name to be chosen by visitors later): 정동진 앞바다. About every 15–20 minutes in daylight and at sunrise, two or three leap
+   far out at sea. The moment comes from the clock, so everyone in the room sees the same leap at the same time. ===== */
+const bodol=(()=>{const SLOT=17*60e3,FORCE=/[?&]dolphin/.test(location.search),T0=Date.now();
+  const hv=n=>{const x=Math.sin(n*12.9898+78.233)*43758.5453;return x-Math.floor(x)};
+  const skin=new THREE.MeshStandardMaterial({color:C('#4d5a66'),roughness:.45,metalness:.05}),belly=new THREE.MeshStandardMaterial({color:C('#c9cfd2'),roughness:.5});
+  const make=()=>{const g=new THREE.Group();
+    const body=new THREE.Mesh(new THREE.SphereGeometry(1,16,10),skin);body.scale.set(1.35,.36,.36);g.add(body);
+    const under=new THREE.Mesh(new THREE.SphereGeometry(1,14,8),belly);under.scale.set(1.1,.26,.3);under.position.y=-.1;g.add(under);
+    const nose=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),skin);nose.scale.set(.4,.13,.13);nose.position.set(1.42,-.05,0);g.add(nose);
+    const fin=new THREE.Mesh(new THREE.ConeGeometry(.22,.5,4),skin);fin.scale.z=.25;fin.position.set(-.05,.42,0);fin.rotation.z=-.5;g.add(fin);
+    const tail=new THREE.Mesh(new THREE.BoxGeometry(.18,.06,.9),skin);tail.position.set(-1.45,0,0);g.add(tail);
+    const fl=new THREE.Mesh(new THREE.BoxGeometry(.4,.04,.16),skin);fl.position.set(.25,-.22,.3);fl.rotation.y=-.6;g.add(fl);const fr=fl.clone();fr.position.z=-.3;fr.rotation.y=.6;g.add(fr);
+    g.scale.setScalar(1.5);g.userData.dol=1;g.visible=false;scene.add(g);return g};
+  const pods=[make(),make(),make(),make()];
+  const splashM=new THREE.MeshBasicMaterial({color:0xf4f7f8,transparent:true,opacity:0,depthWrite:false});
+  const splashes=pods.map(()=>{const g=new THREE.Group();for(let k=0;k<7;k++){const m=new THREE.Mesh(new THREE.SphereGeometry(.18,6,5),splashM.clone());m.userData.a=k/7*6.28;g.add(m)}g.visible=false;scene.add(g);return g});
+  let shownFor=-1;const tip=$('dolTip');let tipT=null;
+  const jumpOf=now=>{if(FORCE){const k=Math.floor((now-T0-4000)/30000);return{k,at:T0+4000+k*30000}}
+    const k=Math.floor(now/SLOT);return{k,at:k*SLOT+60e3+hv(k)*(SLOT-140e3)}};
+  function tick(now,alt){pods.forEach(p=>p.visible=false);splashes.forEach(p=>p.visible=false);
+    if(!FORCE&&alt<-2.5)return;   // only while the sea can be seen: daylight and the first light before sunrise
+    const j=jumpOf(Date.now()),t=(Date.now()-j.at)/1000;if(t<0||t>10.5)return;
+    if(shownFor!==j.k){shownFor=j.k;tip.hidden=false;clearTimeout(tipT);tipT=setTimeout(()=>tip.hidden=true,4200)}
+    const x0=(hv(j.k+.5)-.5)*22-4,z0=-36-hv(j.k+.25)*16,dir=hv(j.k+.75)<.5?1:-1;
+    // each dolphin swims on at an even pace and breaks the surface three times: a smooth arc out of the water,
+    // nose first back in, a short glide under, then the next arc; four of them, a beat apart
+    const LEAP=1.7,UNDER=.75,CYC=LEAP+UNDER,L=7.2,H=2.7,V=L/LEAP;
+    pods.forEach((g,i)=>{const lt=t-i*.55-(i%2)*.12,sp=splashes[i];g.visible=false;sp.visible=false;if(lt<0)return;
+      const c=Math.floor(lt/CYC),ph=lt-c*CYC;if(c>2)return;
+      const zz=z0+[0,1.6,-1.3,3][i],xs=x0+dir*([0,-1.8,-3.2,-5][i]);   // a loose line, staggered back
+      const xAt=tt=>xs+dir*V*tt;
+      if(ph<LEAP){const u=ph/LEAP,y=-7.25+Math.sin(u*Math.PI)*H,pitch=Math.atan2(H*Math.PI*Math.cos(u*Math.PI),L);
+        g.position.set(xAt(lt),y,zz);g.rotation.order='YZX';g.rotation.set(0,dir>0?0:Math.PI,pitch);g.visible=true}
+      // splashes where it leaves and where it re-enters the water
+      const sv=[[ph/0.9,c*CYC],[(ph-LEAP)/0.9,c*CYC+LEAP]];
+      for(const [v,at] of sv){if(v<0||v>1)continue;sp.position.set(xAt(at),-7,zz);sp.visible=true;
+        sp.children.forEach(m=>{const a=m.userData.a;m.position.set(Math.cos(a)*.7*v,Math.sin(v*Math.PI)*1.0*(.6+.4*Math.sin(a*3)),Math.sin(a)*.5*v);m.material.opacity=.85*(1-v);m.scale.setScalar(1-v*.4)})}});
+  }
+  return{tick}})();
+
+/* ===== 오징어잡이 배: after dark, a few squid boats' lamps sit far out on the horizon, drifting slowly.
+   Fewer than in the old days (the East Sea squid catch has fallen sharply), so only three or four.
+   Where they sit changes each night, the same for everyone. ===== */
+const squidBoats=(()=>{const hv=n=>{const x=Math.sin(n*91.345+12.77)*43758.5453;return x-Math.floor(x)};
+  const gc=document.createElement('canvas');gc.width=gc.height=128;{const x=gc.getContext('2d'),g=x.createRadialGradient(64,64,0,64,64,64);
+    g.addColorStop(0,'rgba(255,255,240,1)');g.addColorStop(.18,'rgba(235,255,225,.85)');g.addColorStop(.45,'rgba(200,240,210,.25)');g.addColorStop(1,'rgba(200,240,210,0)');x.fillStyle=g;x.fillRect(0,0,128,128)}
+  const tex=new THREE.CanvasTexture(gc);
+  const glowM=new THREE.SpriteMaterial({map:tex,color:0xffffff,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,fog:false});
+  const refM=new THREE.SpriteMaterial({map:tex,color:0xd8f0dc,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,fog:false});
+  const hullM=new THREE.MeshBasicMaterial({color:0x0b0f14,transparent:true,opacity:0});
+  const boats=[0,1,2,3].map(()=>{const g=new THREE.Group();
+    const glow=new THREE.Sprite(glowM);glow.scale.set(16,10,1);glow.position.y=2.6;g.add(glow);
+    const core=new THREE.Sprite(glowM);core.scale.set(3.4,2.1,1);core.position.y=2.2;g.add(core);
+    const ref=new THREE.Sprite(refM);ref.scale.set(3,22,1);ref.position.y=-8.5;g.add(ref);
+    const hull=new THREE.Mesh(new THREE.BoxGeometry(6,.9,1.6),hullM);hull.position.y=.3;g.add(hull);
+    g.visible=false;scene.add(g);return g});
+  let night=-1;
+  function tick(now,alt){const k=clamp((-alt-4)/5,0,1);glowM.opacity=.95*k;refM.opacity=.55*k;hullM.opacity=k;
+    const on=k>0.01;boats.forEach(b=>b.visible=on);if(!on)return;
+    const d=Math.floor((Date.now()+9*36e5-12*36e5)/864e5);   // one layout per night (changes at noon KST)
+    if(night!==d){night=d;const n=3+(hv(d)<.5?1:0);boats.forEach((b,i)=>{b.userData.on=i<n;b.userData.x=(hv(d*7+i)-.5)*360;b.userData.z=-260-hv(d*3+i*5)*140;b.userData.ph=hv(d+i)*6.28})}
+    const t=Date.now()/1000;boats.forEach(b=>{if(!b.userData.on){b.visible=false;return}
+      b.position.set(b.userData.x+Math.sin(t*.004+b.userData.ph)*14,-7+Math.sin(t*.7+b.userData.ph)*.08,b.userData.z)})}
+  return{tick}})();
+
 /* ===== autumn: 단풍잎 and 은행잎 on the yard, a few drifting down ===== */
 const LEAF_COLS=['#b4502a','#c8702c','#d89a3c','#9a3a22','#c9a24a','#a8622a','#e0b552'];
 let falling=null,litter=null;
@@ -780,7 +847,7 @@ const seamM=new THREE.MeshStandardMaterial({color:C(ROOF_KIND==='c'?'#5a6166':RO
 // four rows of seven; the first two (14 seats) are laid out, and the next row appears the moment a 15th guest needs a seat
 // rows are staggered (7 · 6 · 7 · 6) on a flat floor; ?layout=row puts them back in line, ?layout=zig also adds the stepped floor (trial)
 const ZIG=/[?&]layout=zig/.test(location.search),STAGGER=!/[?&]layout=row/.test(location.search);
-const ROW_Z=[-2.4,-.55,1.3,3.15],PER_ROW=7,MIN_ROWS=3,STEP=ZIG?.16:0;
+const ROW_Z=[-2.4,-.55,1.3,3.15],PER_ROW=7,MIN_ROWS=2,STEP=ZIG?.16:0;
 const ROW_Y=ROW_Z.map((z,r)=>r*STEP);
 const seatPos=[],seatRow=[];for(let r=0;r<ROW_Z.length;r++)for(let c=0;c<PER_ROW;c++){
   const odd=STAGGER&&r%2===1;if(odd&&c===PER_ROW-1){seatPos.push(new THREE.Vector3(99,-50,99));seatRow.push(r);continue}   // offset rows hold one fewer
@@ -1318,7 +1385,7 @@ function frame(now){
 
   if(falling)falling.tick(dt,now);
   if(litter)litter.tick(dt);
-  knotTree.tick(now);
+  knotTree.tick(now);bodol.tick(now,s.alt);squidBoats.tick(now,s.alt);
   if(dropped.length)tickDropped(dt,now);
   if(!glideMe(dt))moveMe(dt);
   me.char.g.position.set(me.x,me.mode==='sit'&&me.seat!=null?seatPos[me.seat].y:floorAt(me.x,me.z),me.z);me.char.g.rotation.y=me.ry;
@@ -1765,7 +1832,7 @@ let sbOne=null;function sbClient(){if(sbOne)return sbOne;if(!window.supabase)ret
   try{sbOne=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},realtime:{params:{eventsPerSecond:10}}})}catch(e){sbOne=null}return sbOne}
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
-const APP_V='78';
+const APP_V='82';
 $('ver').textContent='v'+APP_V;
 function connectRoom(){
   // Presence only says who is here (tracked once per connection). Everything else rides broadcasts:
