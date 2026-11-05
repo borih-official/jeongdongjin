@@ -1345,12 +1345,26 @@ function fitView(){const vv=window.visualViewport,h=vv?vv.height+vv.offsetTop:in
 function resize(){fitView();const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);cam.aspect=w/h;cam.fov=w/h<.8?62:50;cam.updateProjectionMatrix()}
 addEventListener('resize',resize);resize();try{visualViewport.addEventListener('resize',fitView)}catch(e){}
 const tgt=new THREE.Vector3();
+// the first steep of every tea: while the leaves go from the caddy into the 다관, the view leans in to the hands, then settles back
+const REDUCE_MOTION=(()=>{try{return matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){return false}})();
+const leafCam={at:0,skip:false},fP=new THREE.Vector3(),fT=new THREE.Vector3(),fA=new THREE.Vector3(),fB=new THREE.Vector3();
+function leafFocus(){if(me.mode!=='sit'||me.act!=='cd2tp'||me.seat<0||!seats[me.seat])return 0;
+  if(leafCam.at!==me.actAt){leafCam.at=me.actAt;leafCam.skip=REDUCE_MOTION||ptrs.size>0}
+  if(leafCam.skip)return 0;const k=(Date.now()-me.actAt)/ACT_MS;if(k<0||k>1)return 0;
+  const sm=x=>x*x*(3-2*x);return k<.16?sm(k/.16):k>.84?sm((1-k)/.16):1}
 function updateCam(){
   camS.th=angLerp(camS.th,camT.th,.12);camS.el+=(camT.el-camS.el)*.12;camS.r+=(camT.r-camS.r)*.12;
   const c=me.char.g.position;tgt.set(c.x,c.y+(me.mode==='sit'?.95:1.15),c.z+(me.mode==='sit'?-.4:0));
   const ce=Math.cos(camS.el);
   cam.position.set(tgt.x+Math.sin(camS.th)*ce*camS.r,tgt.y+Math.sin(camS.el)*camS.r,tgt.z+Math.cos(camS.th)*ce*camS.r);   // the view stays put while brewing
-  cam.position.y=Math.max(cam.position.y,.5);cam.lookAt(tgt);
+  cam.position.y=Math.max(cam.position.y,.5);
+  const f=leafFocus();
+  if(f>0){const st=seats[me.seat];st.cd.getWorldPosition(fA);st.tp.getWorldPosition(fB);fT.copy(fA).lerp(fB,.5);fT.y+=.06;
+    fP.set(fT.x-1.05,fT.y+.78,fT.z+.78);   // beside the left shoulder (the tumbler stands on the right), looking down at the hands
+    // swing out to the side first and come down after, so the view goes around the head rather than through it
+    const wx=Math.sqrt(f),wz=f*f;cam.position.set(cam.position.x+(fP.x-cam.position.x)*wx,cam.position.y+(fP.y-cam.position.y)*f+Math.sin(f*Math.PI)*.25,cam.position.z+(fP.z-cam.position.z)*wz);
+    fA.copy(tgt).lerp(fT,f);cam.lookAt(fA)}
+  else cam.lookAt(tgt);
   sky.position.copy(cam.position);starPts.position.copy(cam.position);
   const fade=clamp((cam.position.y-5)/1.4,0,1);roofM.opacity=seamM.opacity=1-fade*.88;roofM.depthWrite=seamM.depthWrite=fade<.5;ceilM.opacity=1-fade*.9;ceilM.depthWrite=fade<.5;
   // a paper wall between the camera and me turns see-through
@@ -1832,7 +1846,7 @@ let sbOne=null;function sbClient(){if(sbOne)return sbOne;if(!window.supabase)ret
   try{sbOne=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},realtime:{params:{eventsPerSecond:10}}})}catch(e){sbOne=null}return sbOne}
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
-const APP_V='82';
+const APP_V='83';
 $('ver').textContent='v'+APP_V;
 function connectRoom(){
   // Presence only says who is here (tracked once per connection). Everything else rides broadcasts:
