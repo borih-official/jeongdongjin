@@ -660,6 +660,107 @@ const squidBoats=(()=>{const hv=n=>{const x=Math.sin(n*91.345+12.77)*43758.5453;
       b.position.set(b.userData.x+Math.sin(t*.004+b.userData.ph)*14,-7+Math.sin(t*.7+b.userData.ph)*.08,b.userData.z)})}
   return{tick}})();
 
+/* ===== 차실 고양이: cream with light brown patches and a 무명 scarf. It wanders between a few favourite spots
+   (the sunny glass, under the tables, the doorway, the stepping stones, the foot of 다정 나무), rests a while at each,
+   and sleeps under 다정 나무 at night. Its day is worked out from the clock, so everyone sees it in the same place. ===== */
+const teaCat=(()=>{const hv=n=>{const x=Math.sin(n*45.164+3.71)*43758.5453;return x-Math.floor(x)};
+  const M=(c,r=.92,map=null)=>new THREE.MeshStandardMaterial({color:C(c),roughness:r,map,emissive:C('#2e261e'),emissiveIntensity:.18});
+  const stripes=(along)=>{const cv=document.createElement('canvas');cv.width=cv.height=256;const x=cv.getContext('2d');x.fillStyle='#a9947a';x.fillRect(0,0,256,256);
+    for(let i=0;i<256;i++){const f=Math.random()*10;x.fillStyle=`rgba(${120+f},${108+f},${92+f},.18)`;along?x.fillRect(0,i,256,1):x.fillRect(i,0,1,256)}   // fine ticking
+    x.fillStyle='rgba(70,54,40,.8)';
+    for(let k=0;k<11;k++){const c0=k/11*256+Math.random()*8;x.beginPath();for(let j=0;j<=256;j+=8){const w=5+Math.sin(j*.05+k)*2.2,o=Math.sin(j*.035+k*1.7)*7;
+        if(along){j?x.lineTo(j,c0+o):x.moveTo(j,c0+o)}else{j?x.lineTo(c0+o,j):x.moveTo(c0+o,j)}}
+      for(let j=256;j>=0;j-=8){const w=5+Math.sin(j*.05+k)*2.2,o=Math.sin(j*.035+k*1.7)*7;along?x.lineTo(j,c0+o+w):x.lineTo(c0+o+w,j)}x.closePath();x.fill()}
+    const t=new THREE.CanvasTexture(cv);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t};
+  const bandT=stripes(true),merT=stripes(false);
+  const furM=M('#ffffff',.92,bandT),headM=M('#ffffff',.92,merT),paleM=M('#d9cfbd'),patchM=M('#574b3f'),pinkM=M('#c99a90',.8),eyeM=M('#b09a3a',.3),pupM=M('#1c1915',.3),scarfM=M('#ece3d0',1),stitchM=M('#b8a689',1);
+  const mesh=(geo,m,parent,x=0,y=0,z=0)=>{const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.castShadow=true;parent.add(o);return o};
+  const sph=(r,sx,sy,sz,m,parent,x,y,z,seg=14)=>{const o=mesh(new THREE.SphereGeometry(r,seg,Math.max(8,seg-4)),m,parent,x,y,z);o.scale.set(sx,sy,sz);return o};
+  const g=new THREE.Group();scene.add(g);
+  // ---- standing body (walk, sit, groom, stretched out): one smooth turned torso, pivoting at the hips ----
+  const stand=new THREE.Group();g.add(stand);const hip=new THREE.Group();hip.position.set(-.14,.17,0);stand.add(hip);const body=new THREE.Group();body.position.set(.14,-.17,0);hip.add(body);
+  const prof=[[0,0],[.05,.012],[.078,.04],[.086,.09],[.08,.15],[.072,.21],[.074,.27],[.076,.31],[.058,.35],[.026,.372],[0,.376]].map(([r,h])=>new THREE.Vector2(r,h));
+  const torso=mesh(new THREE.LatheGeometry(prof,22),furM,body,-.2,.2,0);torso.rotation.z=-Math.PI/2;torso.scale.set(1.05,1,.9);torso.position.x=-.185;
+  bandT.repeat.set(1,1.4);
+  const neck=mesh(new THREE.CylinderGeometry(.042,.058,.09,12),furM,body,.17,.26,0);neck.rotation.z=-.95;sph(.05,.9,1,.8,paleM,body,.18,.21,0);
+  const headAnchor=new THREE.Object3D();headAnchor.position.set(.21,.298,0);body.add(headAnchor);
+  const legs=[];
+  const leg=(x,z,front)=>{const pv=new THREE.Group();pv.position.set(x,.19,z);body.add(pv);
+    if(!front)sph(.05,.95,1.15,.55,headM,body,x+.005,.2,z*.9);
+    mesh(new THREE.CylinderGeometry(front?.024:.026,.018,.19,10),furM,pv,0,-.095,0);
+    sph(.022,1.3,.6,1,paleM,pv,.007,-.19,0,8);legs.push({pv,front})};
+  leg(.115,.045,1);leg(.115,-.045,1);leg(-.125,.05,0);leg(-.125,-.05,0);
+  const tail=new THREE.Group();tail.position.set(-.19,.225,0);body.add(tail);const segs=[];{let parent=tail;
+    for(let i=0;i<11;i++){const sg=new THREE.Group();sg.position.set(i?-.028:0,0,0);sph(.0155-i*.0006,1.6,1,1,i%2||i>8?patchM:headM,sg,-.012,0,0,8);parent.add(sg);segs.push(sg);parent=sg}}
+  // ---- curled up (asleep) and loaf: a round mound with the tail laid round it ----
+  const curl=new THREE.Group();g.add(curl);
+  const mound=sph(.15,1,.46,.86,headM,curl,0,.066,0,18);
+  const ctail=mesh(new THREE.TorusGeometry(.145,.019,8,24,Math.PI*1.15),furM,curl,0,.025,0);ctail.rotation.set(Math.PI/2,0,.4);
+  const loaf=new THREE.Group();g.add(loaf);
+  sph(.15,1.3,.55,.8,headM,loaf,-.01,.083,0,18);sph(.06,1,.9,1.2,paleM,loaf,.13,.09,0);
+  sph(.024,1.4,.6,1,furM,loaf,.18,.02,.04,8);sph(.024,1.4,.6,1,furM,loaf,.18,.02,-.04,8);   // front paws just peeking out
+  const ltail=mesh(new THREE.TorusGeometry(.13,.017,8,20,Math.PI*.8),furM,loaf,-.03,.02,0);ltail.rotation.set(Math.PI/2,0,1.9);
+  // ---- head (shared): rounded skull, short muzzle with cheeks, ears set wide, almond eyes, and the 무명 scarf below ----
+  const head=new THREE.Group();g.add(head);
+  sph(.06,1.02,.9,1.08,headM,head,0,0,0);sph(.031,.9,.72,1.25,paleM,head,.049,-.018,0);
+  sph(.023,1,.85,1,paleM,head,.044,-.02,.021);sph(.023,1,.85,1,paleM,head,.044,-.02,-.021);
+  [.037,-.037].forEach(z=>{const e=mesh(new THREE.ConeGeometry(.025,.05,3),headM,head,-.008,.06,z);e.rotation.set(z>0?.38:-.38,0,-.12);
+    const ei=mesh(new THREE.ConeGeometry(.015,.034,3),pinkM,head,.003,.058,z*.96);ei.rotation.copy(e.rotation)});
+  const eyes=[.025,-.025].map(z=>{const e=sph(.011,1,.72,.7,eyeM,head,.05,.012,z,8);e.rotation.y=z>0?-.5:.5;const pp=sph(.0058,1,1.6,.6,pupM,head,.059,.012,z*.97,6);return [e,pp]});
+  sph(.0068,1.1,.7,1.2,pinkM,head,.08,-.008,0,6);
+  const mkScarf=(parent,r)=>{const sc=new THREE.Group();parent.add(sc);
+    const band=mesh(new THREE.TorusGeometry(r,.013,8,22),scarfM,sc);const seam=mesh(new THREE.TorusGeometry(r+.002,.0026,4,24),stitchM,sc,0,0,0);
+    sph(.016,1,1,1,scarfM,sc,0,-r-.004,0,8);[[.014,-.2],[-.012,.22]].forEach(([z,rx])=>{const t=mesh(new THREE.BoxGeometry(.008,.05,.026),scarfM,sc,.004,-r-.03,z);t.rotation.set(rx,0,0)});return sc};
+  const scarf=mkScarf(body,.05);scarf.position.set(.18,.268,0);scarf.rotation.set(0,Math.PI/2,0);scarf.rotateX(-.62);   // round the neck, knot under the chin
+  const scarfC=mkScarf(curl,.045);scarfC.position.set(.085,.07,.05);scarfC.rotation.set(0,Math.PI/2+.9,0);
+  const scarfL=mkScarf(loaf,.048);scarfL.position.set(.13,.125,0);scarfL.rotation.set(0,Math.PI/2,0);
+  g.scale.setScalar(1.35);g.traverse(o=>{if(o.isMesh)o.userData.cat=1});
+  const tmpV=new THREE.Vector3();
+  // for now it stays outside: mostly stretched out asleep under 다정 나무, sometimes sitting about the yard
+  const TREE1={x:5.35,z:8.25,pose:'sprawl',face:-.4},TREE2={x:4.15,z:9.35,pose:'sleep',face:2.4};
+  const SITS=[{x:2.6,z:9.9,pose:'sit',face:-1.9},{x:-3.4,z:9.4,pose:'loaf',face:-1.3},{x:-2.3,z:6.4,pose:'groom',face:.9},{x:6.4,z:6.4,pose:'sit',face:-2.6}];
+  const NIGHT=TREE1,SEG=240e3,V=.36;
+  const spotOf=k=>{const h=hv(k);if(h<.38)return TREE1;if(h<.62)return TREE2;return SITS[Math.floor(hv(k+.3)*SITS.length)]};
+  const path=(a,b)=>[a,b];
+  let poked=0;const tip=$('dolTip');let tipT=null;
+  function poke(){poked=performance.now();tip.textContent='고양이가 눈을 가늘게 떴어요 · 골골';tip.hidden=false;clearTimeout(tipT);tipT=setTimeout(()=>{tip.hidden=true;tip.textContent='저 멀리 참돌고래가 뛰었어요 🐬'},3200)}
+  function tick(now,alt){const T=Date.now(),t=now/1000;let x,z,yaw,pose,walking=false;
+    if(alt<-6){({x,z}=NIGHT);yaw=NIGHT.face;pose='sprawl'}
+    else{const k=Math.floor(T/SEG),into=(T-k*SEG)/1000,a=spotOf(k-1),b=spotOf(k),pts=path(a,b);
+      let L=0;const seg=[];for(let i=1;i<pts.length;i++){const d=Math.hypot(pts[i].x-pts[i-1].x,pts[i].z-pts[i-1].z);seg.push(d);L+=d}
+      const walkT=L/V;
+      if(a!==b&&into<walkT){walking=true;let d=into*V;for(let i=0;i<seg.length;i++){if(d<=seg[i]||i===seg.length-1){const u=Math.min(1,d/seg[i]);x=pts[i].x+(pts[i+1].x-pts[i].x)*u;z=pts[i].z+(pts[i+1].z-pts[i].z)*u;yaw=Math.atan2(-(pts[i+1].z-pts[i].z),pts[i+1].x-pts[i].x);break}d-=seg[i]}pose='walk'}
+      else{x=b.x;z=b.z;yaw=b.face;pose=b.pose}}
+    g.position.set(x,floorAt(x,z),z);
+    const cur=g.rotation.y;let dy=yaw-cur;dy=Math.atan2(Math.sin(dy),Math.cos(dy));g.rotation.y=cur+dy*.08;
+    const pk=Math.max(0,1-(performance.now()-poked)/2500);
+    // poses
+    const standing=pose==='walk'||pose==='sit'||pose==='groom'||pose==='sprawl';
+    stand.visible=standing;curl.visible=pose==='sleep';loaf.visible=pose==='loaf';
+    let pitch=0,roll=0,lift=0,hp=0,hy=Math.sin(t*.4)*.18,shut=0;
+    if(pose==='walk'){hp=Math.sin(t*3.4)*.04;lift=Math.abs(Math.sin(t*7.5))*.006}
+    if(pose==='sit'){pitch=.85;lift=-.13;hp=-.75}
+    if(pose==='groom'){pitch=.8;lift=-.13;hp=-.6+Math.sin(t*5)*.25;hy=.7}
+    if(pose==='sprawl'){roll=1.4;lift=-.105;shut=1;hp=.05;hy=0}
+    if(pose==='loaf'){shut=.6;hp=-.05}
+    if(pose==='sleep'){shut=1}
+    if(pk>0){shut=Math.max(shut*(1-pk),pk*.8);hp-=pk*.25}
+    hip.rotation.z+=(pitch-hip.rotation.z)*.1;hip.rotation.x+=(roll-hip.rotation.x)*.08;stand.position.y+=(lift-stand.position.y)*.2;
+    legs.forEach((L,i)=>{let a=0,sy=1;
+      if(pose==='walk')a=Math.sin(t*7.5+(i===0||i===3?0:Math.PI))*.36;
+      if(pitch>.01){if(L.front){a=-hip.rotation.z;sy=Math.max(.3,(.17+stand.position.y+Math.sin(hip.rotation.z)*.255+Math.cos(hip.rotation.z)*.02))/.19}else{sy=.08}}   // sitting up: front legs straight to the ground, hind legs tucked under the haunch
+      if(roll>.01)a=L.front?.45:-.4;
+      L.pv.rotation.z+=(a-L.pv.rotation.z)*.18;L.pv.scale.y+=(sy-L.pv.scale.y)*.18});
+    // the head follows the neck when standing; rests on the mound when curled; sits up at the front of a loaf
+    if(standing){body.updateMatrixWorld(true);headAnchor.getWorldPosition(tmpV);g.worldToLocal(tmpV);head.position.copy(tmpV);head.rotation.set(hip.rotation.x,hy,hp+hip.rotation.z*.55)}
+    else if(pose==='sleep'){head.position.set(.105,.085,.075);head.rotation.set(-.35,-1.25,.25)}
+    else{head.position.set(.17,.165,0);head.rotation.set(0,hy*.5,hp)}
+    eyes.forEach(([e,pp])=>{const k=shut>.5?.12:1;e.scale.y+=(.72*k-e.scale.y)*.25;pp.visible=shut<.5});
+    const br=(pose==='sleep'||pose==='sprawl'||pose==='loaf')?Math.sin(t*1.6)*.035:0;mound.scale.y=.46*(1+br);torso.scale.x=1+br*.5;
+    segs.forEach((sg,i)=>{const sway=Math.sin(t*(pose==='walk'?3:1.2)-i*.45)*(pose==='walk'?.16:.1);
+      sg.rotation.y=roll?.03:sway;sg.rotation.z=i===0?(pose==='walk'?.55:pitch?-1.1:.2):(i<4?-.05:-.12)})}
+  return{tick,poke,g}})();
+
 /* ===== autumn: 단풍잎 and 은행잎 on the yard, a few drifting down ===== */
 const LEAF_COLS=['#b4502a','#c8702c','#d89a3c','#9a3a22','#c9a24a','#a8622a','#e0b552'];
 let falling=null,litter=null;
@@ -694,14 +795,28 @@ if(AUTUMN){
     const l={m,i,x,y,z,base:GROUND+.012,rx:rnd(-tilt,tilt),ry:rnd(0,6.3),rz:rnd(-tilt,tilt),s:rnd(.7,1.3),vx:0,vy:0,vz:0,live:false};
     LV.push(l);put(l);draw(l);meshes[m].setColorAt(i,col.set(cols[k%cols.length]).multiplyScalar(rnd(.7,1)))}
   const live=[],prevPos=new WeakMap();
-  // 바스락: a short, soft burst of filtered noise for your own steps only, very quiet, at most about three a second
-  let lastRustle=0,noiseBuf=null;
-  const rustle=()=>{const t=performance.now();if(t-lastRustle<320)return;lastRustle=t;const a=(typeof ac!=='undefined')&&ac;if(!a||a.state!=='running')return;
-    try{if(!noiseBuf){noiseBuf=a.createBuffer(1,Math.floor(a.sampleRate*.3),a.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(Math.random()<.35?1:.25)}
-      const src=a.createBufferSource();src.buffer=noiseBuf;src.playbackRate.value=.8+Math.random()*.45;
-      const bp=a.createBiquadFilter();bp.type='bandpass';bp.frequency.value=2600+Math.random()*1400;bp.Q.value=.8;
-      const g=a.createGain(),n=a.currentTime;g.gain.setValueAtTime(0,n);g.gain.linearRampToValueAtTime(.014,n+.012);g.gain.exponentialRampToValueAtTime(.0004,n+.2);
-      src.connect(bp).connect(g).connect(a.destination);src.start(n);src.stop(n+.25)}catch(e){}};
+  // 사그락: one slow press into a deep bed of dry leaves. The weight comes down softly, the leaves crush (fine papery
+  // crackles mixed with the warmer crunch of leaves folding), then a sparse settling tail. Six are made once and taken
+  // in turn; one per step, no faster than one every 1.5 s, very quiet, for your own steps only
+  let lastRustle=0,crunch=null,stepDist=0,stepPrev=null;
+  const makeCrunch=a=>{const sr=a.sampleRate,out=[];
+    for(let v=0;v<6;v++){const len=Math.floor(sr*1.4),buf=a.createBuffer(1,len,sr),d=buf.getChannelData(0);
+      const env=t=>{const at=Math.min(1,Math.pow(t/.32,1.6)),main=Math.exp(-Math.max(0,t-.24)/.28),tail=.16*Math.exp(-Math.max(0,t-.3)/.6);return at*(main*.9+tail)};
+      const G=700+Math.floor(Math.random()*200);
+      for(let g=0;g<G;g++){const t0=Math.random()*1.3,e=env(t0);if(Math.random()>e)continue;const st=Math.floor(t0*sr);
+        if(Math.random()<.55){const gl=Math.floor(sr*(.0002+Math.random()*.0012)),amp=Math.pow(Math.random(),2.2)*(.5+.5*e);let prev=0;
+          for(let i=0;i<gl&&st+i<len;i++){const n=Math.random()*2-1,x=n-prev*.6;prev=n;d[st+i]+=x*amp*.8*Math.exp(-i/(gl*.4))}}
+        else{const gl=Math.floor(sr*(.002+Math.random()*.005)),amp=Math.pow(Math.random(),1.8)*(.5+.5*e);let lp=0;const bb=.18+Math.random()*.2;
+          for(let i=0;i<gl&&st+i<len;i++){lp+=((Math.random()*2-1)-lp)*bb;d[st+i]+=lp*amp*1.6*Math.sin(Math.PI*Math.min(1,i/(gl*.2)))*Math.exp(-i/(gl*.45))}}}
+      let pk=0;for(let i=0;i<len;i++)pk=Math.max(pk,Math.abs(d[i]));if(pk>0)for(let i=0;i<len;i++)d[i]/=pk;out.push(buf)}
+    return out};
+  const rustle=()=>{const a=(typeof ac!=='undefined')&&ac;if(!a||a.state!=='running')return;
+    try{if(!crunch)crunch=makeCrunch(a);
+      const src=a.createBufferSource();src.buffer=crunch[Math.floor(Math.random()*crunch.length)];src.playbackRate.value=.92+Math.random()*.14;
+      const hp=a.createBiquadFilter();hp.type='highpass';hp.frequency.value=420;hp.Q.value=.7;
+      const lp=a.createBiquadFilter();lp.type='lowpass';lp.frequency.value=4800;lp.Q.value=.5;
+      const g=a.createGain();g.gain.value=.012+Math.random()*.004;   // soft, small, faint
+      src.connect(hp).connect(lp).connect(g).connect(a.destination);src.start()}catch(e){}};
   litter={busy:()=>live.length>0,tick(dt){
     // every walker (you and everyone you can see) stirs the leaves around their feet
     const walkers=[me,...others.values()];let myKick=false;
@@ -711,7 +826,8 @@ if(AUTUMN){
       for(let gx=fx-1;gx<=fx+1;gx++)for(let gz=fz-1;gz<=fz+1;gz++){const a=grid.get(gx+','+gz);if(!a)continue;
         for(const l of a){if(l.live)continue;const ox=l.x-w.x,oz=l.z-w.z,d=Math.hypot(ox,oz);if(d>.42||Math.random()>.35)continue;
           if(w===me)myKick=true;const k=1/(d||1),f=rnd(.6,1.4);l.vx=ox*k*f+dx/dt*.18;l.vz=oz*k*f+dz/dt*.18;l.vy=rnd(.5,1.3);l.spin=[rnd(-6,6),rnd(-4,4),rnd(-6,6)];l.live=true;live.push(l)}}}
-    if(myKick)rustle();
+    {const p=stepPrev,cur=[me.x,me.z];if(p&&me.mode!=='sit'&&me.z>=5){const d=Math.hypot(cur[0]-p[0],cur[1]-p[1]);if(d<1)stepDist+=d}stepPrev=cur;
+     const tn=performance.now();if(stepDist>.35&&myKick&&tn-lastRustle>1500){stepDist=0;lastRustle=tn;rustle()}else if(stepDist>3)stepDist=0}
     if(!live.length)return;const touched=[false,false];
     for(let k=live.length-1;k>=0;k--){const l=live[k];l.vy-=5.5*dt;l.x+=l.vx*dt;l.z+=l.vz*dt;l.y+=l.vy*dt;const drag=Math.pow(.25,dt);l.vx*=drag;l.vz*=drag;
       l.rx+=l.spin[0]*dt;l.ry+=l.spin[1]*dt;l.rz+=l.spin[2]*dt;
@@ -794,9 +910,8 @@ function updateEnv(now,s){
 const woodDark=mat('#3b2f26',{roughness:.6});
 box(16,.3,10,mat('#7a634e',{roughness:.7}),0,-.15,0).receiveShadow=true;
 const plankM=mat('#5e4b3b');for(let i=-7.5;i<=7.5;i+=.5)box(.012,.002,10,plankM,i,.002,0);
-[-7.9,-4.8,-2.4,0,2.4,4.8,7.9].forEach(x=>box(.16,4.2,.16,woodDark,x,2.1,-4.9).castShadow=true);
-box(16,.22,.22,woodDark,0,4.2,-4.9);box(16,.12,.3,woodDark,0,.06,-4.9);
-const glass=new THREE.Mesh(new THREE.PlaneGeometry(16,4.1),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.04,depthWrite:false}));glass.position.set(0,2.1,-4.95);scene.add(glass);
+// sea side: one great floor-to-roof window (통창). No posts or beams cross the view; a slim sill below, the corner posts at the ends
+box(16,.05,.14,woodDark,0,.025,-4.9);
 // glass walls on all four sides; the entrance is in the middle of the land side
 const paperM=new THREE.MeshStandardMaterial({color:C('#dfe9ee'),roughness:.05,metalness:.1,transparent:true,opacity:.1,depthWrite:false,side:THREE.DoubleSide});   // the glass
 const lattM=new THREE.MeshStandardMaterial({color:C('#4a3a2e'),roughness:.6,transparent:true,opacity:1});   // the wooden frames
@@ -849,8 +964,9 @@ const seamM=new THREE.MeshStandardMaterial({color:C(ROOF_KIND==='c'?'#5a6166':RO
   if(ROOF_KIND!=='c'){const lineM=mat('#7d5f42',{roughness:.8});for(let x=-ROOF_W/2+.4;x<ROOF_W/2;x+=.4){const b=new THREE.Mesh(new THREE.BoxGeometry(.015,.012,L-.2),lineM);b.position.set(x,-ROOF_T/2-.045,0);g.add(b)}}}
 // the walls reach up to the roof: a band of glass under the high eave, glass gables at both ends, a timber band at the low entrance side
 {const top=z=>roofAt(z)-ROOF_T/2-.05;
-  const fh=top(-4.9)-4.2;if(fh>.05){const front=new THREE.Mesh(new THREE.PlaneGeometry(16,fh),paperM);front.position.set(0,4.2+fh/2,-4.95);front.renderOrder=2;scene.add(front);
-    for(let x=-7.9;x<=7.95;x+=2.633)box(.1,fh,.12,lattM,x,4.2+fh/2,-4.9)}
+  {const fh=top(-4.9)-.05;const front=new THREE.Mesh(new THREE.PlaneGeometry(15.8,fh),new THREE.MeshBasicMaterial({color:C('#dfe9ee'),transparent:true,opacity:.05,depthWrite:false,side:THREE.DoubleSide}));   // plain glass: no lamp glints floating over the sea
+   front.position.set(0,.05+fh/2,-4.95);front.renderOrder=2;scene.add(front);
+    const sheen=new THREE.Mesh(new THREE.PlaneGeometry(15.8,fh),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.035,depthWrite:false}));sheen.position.set(0,.05+fh/2,-4.97);scene.add(sheen)}
   [-7.95,7.95].forEach(x=>{if(top(-4.9)-4.2<.05)return;const sh=new THREE.Shape();sh.moveTo(-4.9,4.2);sh.lineTo(4.9,4.2);sh.lineTo(4.9,top(4.9));sh.lineTo(-4.9,top(-4.9));sh.closePath();
     const gm=new THREE.Mesh(new THREE.ShapeGeometry(sh),paperM);gm.rotation.y=-Math.PI/2;gm.position.x=x;gm.renderOrder=2;scene.add(gm);
     const edge=new THREE.Mesh(new THREE.BoxGeometry(.1,.1,Math.hypot(9.8,top(-4.9)-top(4.9))),lattM);edge.position.set(x,(top(-4.9)+top(4.9))/2,0);edge.rotation.x=ROOF_A;scene.add(edge)});
@@ -1232,7 +1348,42 @@ function renderTeas(){const t0=TEAS.find(t=>t.k===me.tea)||TEAS[0],tp=$('teaPick
 renderTeas();
 function timer(sec){me.total=sec||0;me.until=sec?Date.now()+sec*1000:0}
 function startBrew(){me.steep=0;me.sk=0;me.drink=false;me.act=null;me.brew='idle';timer(0);presence();brewText()}
-function startAct(k){me.act=k;me.actAt=Date.now();presence();brewText()}
+// water poured from one vessel into another. A thin stream (쪼로록) sings in the vessel below: a resonance that climbs
+// as it fills, a quick little flutter in the stream, and small bubbles; under it a soft body of falling water
+function makePour(sr,kind){
+  const P={water:{dur:2.2,f0:520,f1:900,rate:70,stream:1700,body:.5,r0:420,r1:760,ring:.35,flut:9},
+           pot:{dur:2.1,f0:800,f1:1300,rate:55,stream:2100,body:.3,r0:700,r1:1500,ring:.9,flut:12},
+           cup:{dur:1.9,f0:1000,f1:1700,rate:45,stream:2600,body:.15,r0:1100,r1:2300,ring:1,flut:15}}[kind];
+  const n=Math.floor(sr*P.dur),d=new Float32Array(n);
+  const env=t=>Math.min(1,t/.07)*Math.min(1,(P.dur-t)/.3);
+  const bp=(f,q)=>{const w=2*Math.PI*f/sr,al=Math.sin(w)/(2*q);return{b0:al,b2:-al,a0:1+al,a1:-2*Math.cos(w),a2:1-al}};
+  let x1=0,x2=0,y1=0,y2=0,r1=0,r2=0,rx1=0,rx2=0,lp=0,wob=0,fl=0,flT=0;
+  const s0=bp(P.stream,.9);
+  for(let i=0;i<n;i++){const t=i/sr,fill=t/P.dur;
+    wob+=((Math.random()*2-1)-wob)*.0006;
+    // flutter: the stream breaks up a little, many times a second
+    flT+=P.flut*(.8+Math.random()*.4)/sr;const flm=.6+.4*Math.sin(2*Math.PI*flT)*Math.sin(2*Math.PI*flT*.37+1);
+    const xn=Math.random()*2-1;
+    const y=(s0.b0*xn+s0.b2*x2-s0.a1*y1-s0.a2*y2)/s0.a0;x2=x1;x1=xn;y2=y1;y1=y;
+    // the singing resonance, gliding up as the vessel fills (recomputed every sample, cheap enough)
+    const fr=P.r0*Math.pow(P.r1/P.r0,Math.pow(fill,1.3)),c=bp(fr,14);
+    const rr=(c.b0*xn+c.b2*rx2-c.a1*r1-c.a2*r2)/c.a0;rx2=rx1;rx1=xn;r2=r1;r1=rr;
+    lp+=((Math.random()*2-1)-lp)*.02;
+    d[i]=(y*.16*(1+wob*6)+rr*P.ring*2.2*flm+lp*P.body*.6)*env(t)}
+  // bubbles: short rising sine chirps, their pitch climbing as the vessel fills
+  let t=.04;while(t<P.dur-.15){t+=-Math.log(Math.random())/P.rate;const fill=t/P.dur,f=(P.f0+(P.f1-P.f0)*fill)*(.7+Math.random()*.7),tau=.006+Math.random()*.012,amp=(.15+Math.random()*.6)*env(t);
+    const st=Math.floor(t*sr),L=Math.floor(tau*6*sr);let ph=0;
+    for(let i=0;i<L&&st+i<n;i++){const tt=i/sr;ph+=2*Math.PI*f*(1+tt*14)/sr;d[st+i]+=Math.sin(ph)*amp*Math.exp(-tt/tau)*.55}}
+  let pk=0;for(let i=0;i<n;i++)pk=Math.max(pk,Math.abs(d[i]));for(let i=0;i<n;i++)d[i]/=pk||1;return d}
+// the sound of each pour, made once per kind and played softly while the stream is running (about 2.4 s into the act)
+const POUR_OF={tb2tp:'water',tp2sk:'pot',sk2bd:'cup'},pourBufs={};
+function playPour(k){const kind=POUR_OF[k],a=(typeof ac!=='undefined')&&ac;if(!kind||!a||a.state!=='running')return;
+  try{if(!pourBufs[kind]){const d=makePour(a.sampleRate,kind),b=a.createBuffer(1,d.length,a.sampleRate);b.getChannelData(0).set(d);pourBufs[kind]=b}
+    const src=a.createBufferSource();src.buffer=pourBufs[kind];src.playbackRate.value=.97+Math.random()*.06;
+    const lp=a.createBiquadFilter();lp.type='lowpass';lp.frequency.value=4500;lp.Q.value=.5;
+    const lp2=a.createBiquadFilter();lp2.type='lowpass';lp2.frequency.value=4500;lp2.Q.value=.5;
+    const g=a.createGain();g.gain.value=.032;src.connect(lp).connect(lp2).connect(g).connect(a.destination);src.start(a.currentTime+ACT_MS/1000*.37)}catch(e){}}
+function startAct(k){me.act=k;me.actAt=Date.now();presence();brewText();playPour(k)}
 function finishAct(){
   const k=me.act;me.act=null;
   if(k==='cd2tp'){me.act=null;startAct('tb2tp');return}
@@ -1412,7 +1563,7 @@ function frame(now){
 
   if(falling)falling.tick(dt,now);
   if(litter)litter.tick(dt);
-  knotTree.tick(now);bodol.tick(now,s.alt);squidBoats.tick(now,s.alt);
+  knotTree.tick(now);bodol.tick(now,s.alt);squidBoats.tick(now,s.alt);teaCat.tick(now,s.alt);
   if(dropped.length)tickDropped(dt,now);
   if(!glideMe(dt))moveMe(dt);
   me.char.g.position.set(me.x,me.mode==='sit'&&me.seat!=null?seatPos[me.seat].y:floorAt(me.x,me.z),me.z);me.char.g.rotation.y=me.ry;
@@ -1566,6 +1717,7 @@ $('gbForm').onsubmit=async e=>{e.preventDefault();if(gbBusy)return;
   cvs.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,t:performance.now()}});
   cvs.addEventListener('pointerup',e=>{if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>8||performance.now()-down.t>500){down=null;return}down=null;
     const r=cvs.getBoundingClientRect();ndc.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);ray.setFromCamera(ndc,cam);
+    if(ray.intersectObject(teaCat.g,true).length){teaCat.poke();return}
     if(ray.intersectObject(knotTree.board,false).length){signTip();return}
     if(way.count&&ray.intersectObject(way,false).length){$('treeGo').onclick();return}
     const hit=ray.intersectObject(knotTree.strips,false)[0];if(!hit||hit.instanceId==null||!knots[hit.instanceId]){if(!tip.hidden){clearTimeout(tipTimer);tip.hidden=true}return}const k=knots[hit.instanceId];
@@ -1860,7 +2012,7 @@ let sbOne=null;function sbClient(){if(sbOne)return sbOne;if(!window.supabase)ret
   try{sbOne=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},realtime:{params:{eventsPerSecond:10}}})}catch(e){sbOne=null}return sbOne}
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
-const APP_V='85';
+const APP_V='96';
 $('ver').textContent='v'+APP_V;
 function connectRoom(){
   // Presence only says who is here (tracked once per connection). Everything else rides broadcasts:
