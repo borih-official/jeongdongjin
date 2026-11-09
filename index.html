@@ -661,7 +661,7 @@ const squidBoats=(()=>{const hv=n=>{const x=Math.sin(n*91.345+12.77)*43758.5453;
       b.position.set(b.userData.x+Math.sin(t*.004+b.userData.ph)*14,-7+Math.sin(t*.7+b.userData.ph)*.08,b.userData.z)})}
   return{tick}})();
 
-/* ===== 차실 고양이: cream with light brown patches and a 무명 scarf. It wanders between a few favourite spots
+/* ===== 차실 고양이: a grey-brown mackerel tabby. It wanders between a few favourite spots
    (the sunny glass, under the tables, the doorway, the stepping stones, the foot of 다정 나무), rests a while at each,
    and sleeps under 다정 나무 at night. Its day is worked out from the clock, so everyone sees it in the same place. ===== */
 const teaCat=(()=>{const hv=n=>{const x=Math.sin(n*45.164+3.71)*43758.5453;return x-Math.floor(x)};
@@ -701,7 +701,7 @@ const teaCat=(()=>{const hv=n=>{const x=Math.sin(n*45.164+3.71)*43758.5453;retur
   sph(.15,1.3,.55,.8,headM,loaf,-.01,.083,0,18);sph(.06,1,.9,1.2,paleM,loaf,.13,.09,0);
   sph(.024,1.4,.6,1,furM,loaf,.18,.02,.04,8);sph(.024,1.4,.6,1,furM,loaf,.18,.02,-.04,8);   // front paws just peeking out
   const ltail=mesh(new THREE.TorusGeometry(.13,.017,8,20,Math.PI*.8),furM,loaf,-.03,.02,0);ltail.rotation.set(Math.PI/2,0,1.9);
-  // ---- head (shared): rounded skull, short muzzle with cheeks, ears set wide, almond eyes, and the 무명 scarf below ----
+  // ---- head (shared): rounded skull, short muzzle with cheeks, ears set wide, almond eyes below ----
   const head=new THREE.Group();g.add(head);
   sph(.06,1.02,.9,1.08,headM,head,0,0,0);sph(.031,.9,.72,1.25,paleM,head,.049,-.018,0);
   sph(.023,1,.85,1,paleM,head,.044,-.02,.021);sph(.023,1,.85,1,paleM,head,.044,-.02,-.021);
@@ -709,30 +709,51 @@ const teaCat=(()=>{const hv=n=>{const x=Math.sin(n*45.164+3.71)*43758.5453;retur
     const ei=mesh(new THREE.ConeGeometry(.015,.034,3),pinkM,head,.003,.058,z*.96);ei.rotation.copy(e.rotation)});
   const eyes=[.025,-.025].map(z=>{const e=sph(.011,1,.72,.7,eyeM,head,.05,.012,z,8);e.rotation.y=z>0?-.5:.5;const pp=sph(.0058,1,1.6,.6,pupM,head,.059,.012,z*.97,6);return [e,pp]});
   sph(.0068,1.1,.7,1.2,pinkM,head,.08,-.008,0,6);
-  const mkScarf=(parent,r)=>{const sc=new THREE.Group();parent.add(sc);
-    const band=mesh(new THREE.TorusGeometry(r,.013,8,22),scarfM,sc);const seam=mesh(new THREE.TorusGeometry(r+.002,.0026,4,24),stitchM,sc,0,0,0);
-    sph(.016,1,1,1,scarfM,sc,0,-r-.004,0,8);[[.014,-.2],[-.012,.22]].forEach(([z,rx])=>{const t=mesh(new THREE.BoxGeometry(.008,.05,.026),scarfM,sc,.004,-r-.03,z);t.rotation.set(rx,0,0)});return sc};
-  const scarf=mkScarf(body,.05);scarf.position.set(.18,.268,0);scarf.rotation.set(0,Math.PI/2,0);scarf.rotateX(-.62);   // round the neck, knot under the chin
-  const scarfC=mkScarf(curl,.045);scarfC.position.set(.085,.07,.05);scarfC.rotation.set(0,Math.PI/2+.9,0);
-  const scarfL=mkScarf(loaf,.048);scarfL.position.set(.13,.125,0);scarfL.rotation.set(0,Math.PI/2,0);
   g.scale.setScalar(1.35);g.traverse(o=>{if(o.isMesh)o.userData.cat=1});
   const tmpV=new THREE.Vector3();
-  // for now it stays outside: mostly stretched out asleep under 다정 나무, sometimes sitting about the yard
-  const TREE1={x:5.35,z:8.25,pose:'sprawl',face:-.4},TREE2={x:4.15,z:9.35,pose:'sleep',face:2.4};
-  const SITS=[{x:2.6,z:9.9,pose:'sit',face:-1.9},{x:-3.4,z:9.4,pose:'loaf',face:-1.3},{x:-2.3,z:6.4,pose:'groom',face:.9},{x:6.4,z:6.4,pose:'sit',face:-2.6}];
-  const NIGHT=TREE1,SEG=240e3,V=.36;
-  const spotOf=k=>{const h=hv(k);if(h<.38)return TREE1;if(h<.62)return TREE2;return SITS[Math.floor(hv(k+.3)*SITS.length)]};
-  const path=(a,b)=>[a,b];
+  // its day, in three-minute stretches picked at random (the same for everyone, from the clock): a slow wander about the
+  // yard with pauses to sit or wash, a long nap somewhere, or a climb up 다정 나무 to doze on a low branch. Night: asleep under the tree
+  const TX=KNOT_TREE.x,TZ=KNOT_TREE.z,SEG=180e3,V=.34,UP=1.05,DOWN=.95,ALONG=1.1;
+  // up the tree like a cat: a crouch, then 타닥 — one spring onto the trunk, a second kick onto the branch. Down in one leap
+  const BASE={x:TX+.75,z:TZ+.08},TRUNK={x:TX+.17,z:TZ+.05},PERCH={x:TX+Math.cos(1.25)*.5,z:TZ+Math.sin(1.25)*.5},PERCH_Y=1.75,TRUNK_Y=1.5;
+  const NAPS=[{x:TX+.65,z:TZ-.35,pose:'sprawl',face:-.4},{x:TX-.55,z:TZ+.75,pose:'sleep',face:2.4},{x:2.4,z:10.2,pose:'sleep',face:-1.9},{x:-4.2,z:9.2,pose:'sprawl',face:-1.3},{x:6.6,z:6.5,pose:'loaf',face:-2.6},{x:-6.5,z:12.2,pose:'sleep',face:.6}];
+  const NIGHT={x:TX+.65,z:TZ-.35,pose:'sprawl',face:-.4};
+  const yardPt=h=>({x:-8+hv(h)*16,z:6.2+hv(h+.37)*7.2});
+  const endOf=k=>{const h=hv(k*1.7+.11);return h<.42?NAPS[Math.floor(hv(k+.6)*NAPS.length)]:h<.75?Object.assign(yardPt(k+.9),{pose:['sit','loaf','groom'][Math.floor(hv(k+.2)*3)],face:hv(k+.4)*6.28-3.14}):{x:BASE.x,z:BASE.z,pose:'sit',face:Math.PI,tree:1}};
+  const plans=new Map();
+  function planOf(k){if(plans.has(k))return plans.get(k);const st=endOf(k-1),en=endOf(k),steps=[];let t=0;
+    const walk=(a,b)=>{const d=Math.hypot(b.x-a.x,b.z-a.z);if(d<.05)return;steps.push({type:'walk',a,b,t0:t,t1:t+d/V});t+=d/V};
+    const rest=(p,pose,face,dur)=>{steps.push({type:'rest',p,pose,face,t0:t,t1:t+dur});t+=dur};
+    let at={x:st.x,z:st.z};
+    if(en.tree){walk(at,BASE);   // climb: up the trunk, out along a low branch, a long doze, then back down
+      steps.push({type:'climb',t0:t,t1:t+UP,up:1});t+=UP;steps.push({type:'along',t0:t,t1:t+ALONG,out:1});t+=ALONG;
+      const stay=Math.max(20,SEG/1000-t-(DOWN+ALONG+6));rest({x:PERCH.x,z:PERCH.z,y:PERCH_Y},hv(k+.8)<.5?'loaf':'sprawl',1.25+Math.PI,stay);
+      steps.push({type:'along',t0:t,t1:t+ALONG,out:0});t+=ALONG;steps.push({type:'climb',t0:t,t1:t+DOWN,up:0});t+=DOWN;at=BASE}
+    else if(en.pose==='sit'||en.pose==='loaf'||en.pose==='groom'){   // a wander: two or three stops on the way
+      const n=2+Math.floor(hv(k+.15)*2);for(let i=0;i<n;i++){const p=yardPt(k*3.1+i);walk(at,p);at=p;rest(p,['sit','groom','loaf','sit'][Math.floor(hv(k+i*.7)*4)],hv(k+i)*6.28-3.14,5+hv(k*2+i)*9)}
+      walk(at,en);at=en}
+    else{walk(at,en);at=en}
+    rest({x:en.x,z:en.z,y:0},en.pose,en.face,1e9);   // and stays so till the next stretch
+    plans.set(k,steps);if(plans.size>6)plans.delete(plans.keys().next().value);return steps}
   let poked=0;const tip=$('dolTip');let tipT=null;
   function poke(){poked=performance.now();tip.textContent='고양이가 눈을 가늘게 떴어요 · 골골';tip.hidden=false;clearTimeout(tipT);tipT=setTimeout(()=>{tip.hidden=true;tip.textContent='저 멀리 참돌고래가 뛰었어요 🐬'},3200)}
-  function tick(now,alt){const T=Date.now(),t=now/1000;let x,z,yaw,pose,walking=false;
+  function tick(now,alt){const T=Date.now(),t=now/1000;let x,z,yaw,pose,walking=false,y=null,climb=0;
     if(alt<-6){({x,z}=NIGHT);yaw=NIGHT.face;pose='sprawl'}
-    else{const k=Math.floor(T/SEG),into=(T-k*SEG)/1000,a=spotOf(k-1),b=spotOf(k),pts=path(a,b);
-      let L=0;const seg=[];for(let i=1;i<pts.length;i++){const d=Math.hypot(pts[i].x-pts[i-1].x,pts[i].z-pts[i-1].z);seg.push(d);L+=d}
-      const walkT=L/V;
-      if(a!==b&&into<walkT){walking=true;let d=into*V;for(let i=0;i<seg.length;i++){if(d<=seg[i]||i===seg.length-1){const u=Math.min(1,d/seg[i]);x=pts[i].x+(pts[i+1].x-pts[i].x)*u;z=pts[i].z+(pts[i+1].z-pts[i].z)*u;yaw=Math.atan2(-(pts[i+1].z-pts[i].z),pts[i+1].x-pts[i].x);break}d-=seg[i]}pose='walk'}
-      else{x=b.x;z=b.z;yaw=b.face;pose=b.pose}}
-    g.position.set(x,floorAt(x,z),z);
+    else{const k=Math.floor(T/SEG),into=(T-k*SEG)/1000,steps=planOf(k);let s=steps.find(q=>into<q.t1)||steps[steps.length-1];const u=Math.min(1,Math.max(0,(into-s.t0)/(s.t1-s.t0)));
+      if(s.type==='walk'){x=s.a.x+(s.b.x-s.a.x)*u;z=s.a.z+(s.b.z-s.a.z)*u;yaw=Math.atan2(-(s.b.z-s.a.z),s.b.x-s.a.x);pose='walk';walking=true}
+      else if(s.type==='climb'){const arc=(a,b,ya,yb,h,v)=>{x=a.x+(b.x-a.x)*v;z=a.z+(b.z-a.z)*v;y=GROUND+ya+(yb-ya)*v+Math.sin(Math.PI*v)*h};
+        const J1={x:TRUNK.x+.06,z:TRUNK.z};
+        if(s.up){const tt=u*UP;yaw=Math.PI;
+          if(tt<.28){x=BASE.x;z=BASE.z;y=GROUND;pose='loaf';climb=0}                                   // crouch, tail twitching
+          else if(tt<.62){arc(BASE,J1,0,.95,.28,(tt-.28)/.34);pose='walk';climb=1.05}                   // spring onto the trunk
+          else{arc(J1,TRUNK,.95,TRUNK_Y,.18,(tt-.62)/.43);pose='walk';climb=.7}}                        // kick up onto the branch
+        else{const tt=u*DOWN;yaw=0;
+          if(tt<.25){x=TRUNK.x;z=TRUNK.z;y=GROUND+TRUNK_Y;pose='loaf';climb=0}                          // a look down first
+          else{const v=(tt-.25)/.7;arc(TRUNK,BASE,TRUNK_Y,0,.22,v);pose='walk';climb=v<.5?-.25:-.75}}}   // and one leap to the ground
+      else if(s.type==='along'){const v=s.out?u:1-u;x=TRUNK.x+(PERCH.x-TRUNK.x)*v;z=TRUNK.z+(PERCH.z-TRUNK.z)*v;y=GROUND+TRUNK_Y+(PERCH_Y-TRUNK_Y)*v;yaw=Math.atan2(-(PERCH.z-TRUNK.z),PERCH.x-TRUNK.x)+(s.out?0:Math.PI);pose='walk'}
+      else{x=s.p.x;z=s.p.z;if(s.p.y)y=GROUND+s.p.y;yaw=s.face;pose=s.pose}}
+    g.position.set(x,y!=null?y:floorAt(x,z),z);
+    g.rotation.order='YZX';g.rotation.z+=(climb-g.rotation.z)*.35;   // the body follows the leap: nose up going up, nose down coming down
     const cur=g.rotation.y;let dy=yaw-cur;dy=Math.atan2(Math.sin(dy),Math.cos(dy));g.rotation.y=cur+dy*.08;
     const pk=Math.max(0,1-(performance.now()-poked)/2500);
     // poses
@@ -2025,7 +2046,7 @@ let sbOne=null;function sbClient(){if(sbOne)return sbOne;if(!window.supabase)ret
   try{sbOne=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},realtime:{params:{eventsPerSecond:10}}})}catch(e){sbOne=null}return sbOne}
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
-const APP_V='102';
+const APP_V='104';
 $('ver').textContent='v'+APP_V;
 function connectRoom(){
   // Presence only says who is here (tracked once per connection). Everything else rides broadcasts:
