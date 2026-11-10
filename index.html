@@ -84,6 +84,8 @@ body.cha .rail-tab,body.cha .teapick,body.cha .rail-tuck{opacity:0;pointer-event
 body.cha .rail .acts .btn:not(#cha){display:none}
 body.cha .rail.tucked{transform:translateY(-50%);opacity:1;pointer-events:auto}
 body.cha #cha{opacity:.55}
+.pet-bar{position:fixed;left:max(16px,env(safe-area-inset-left,0px));top:calc(env(safe-area-inset-top,0px) + 190px);z-index:36;display:flex;align-items:center;gap:10px;font-family:var(--f-ui);font-size:12px;color:var(--text);background:var(--paper);border-radius:999px;padding:5px 5px 5px 14px;box-shadow:0 6px 20px rgba(0,0,0,.28);white-space:nowrap;animation:rise .35s ease-out}
+.pet-bar button{font:inherit;font-weight:600;color:var(--paper);background:var(--text);border:0;border-radius:999px;padding:6px 12px;cursor:pointer}
 .dol-tip{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 150px);transform:translateX(-50%);z-index:35;font-family:var(--f-ui);font-size:12.5px;color:var(--text);background:var(--paper);border-radius:999px;padding:7px 14px;box-shadow:0 6px 20px rgba(0,0,0,.3);pointer-events:none;animation:rise .35s ease-out;white-space:nowrap}
 .inapp-note{background:rgba(196,176,122,.16);border-radius:12px;padding:10px 12px;color:var(--ink)}
 .inapp-note .btn{display:block;margin:8px auto 0;font-size:13px}
@@ -267,6 +269,7 @@ body.cha .greets,body.cha .say,body.cha .mine,body.cha .labels,body.cha .side,bo
   </div>
   <div class="flash" id="flash"></div>
   <div class="knot-tip" id="knotTip" hidden></div>
+  <div class="pet-bar" id="petBar" hidden><span>밀어서 둘러보기 · 벌려서 확대</span><button type="button" id="catStop">일어나기</button></div>
   <div class="dol-tip" id="dolTip" hidden>저 멀리 참돌고래가 뛰었어요 🐬</div>
   <button class="treego" id="treeGo" type="button" hidden><span class="tg-l">다정 나무 보러 가기</span><span class="tg-a" aria-hidden="true">→</span></button>
   <div class="gb" id="rk" hidden><div class="gb-card" role="dialog" aria-label="함께 마신 차">
@@ -735,18 +738,27 @@ const teaCat=(()=>{const hv=n=>{const x=Math.sin(n*45.164+3.71)*43758.5453;retur
     else{walk(at,en);at=en}
     rest({x:en.x,z:en.z,y:0},en.pose,en.face,1e9);   // and stays so till the next stretch
     plans.set(k,steps);if(plans.size>6)plans.delete(plans.keys().next().value);return steps}
-  let poked=0,petUntil=0,petYaw=0,near=false,lastIntro=-1e9;const tip=$('dolTip');let tipT=null;
-  function pet(){let dx=g.position.x-me.x,dz=g.position.z-me.z;const d=Math.hypot(dx,dz)||1;
-    if(d>.6){me.x=g.position.x-dx/d*.55;me.z=g.position.z-dz/d*.55;dx=dx/d*.55;dz=dz/d*.55}   // step up close
-    me.ry=Math.atan2(-dx,-dz);me.char.petUntil=performance.now()+4500;                      // turn to it, lean in and reach out a hand
-    if(typeof camT!=='undefined'){camT.th=me.ry+1.35;camT.el=.3}                           // see it from the side: you and the cat
-    petUntil=performance.now()+4500;petYaw=Math.atan2(dz,-dx);poked=performance.now()+1500;
-    setTimeout(()=>{if(tipSay)tipSay('골골골… 고양이가 눈을 감고 손에 머리를 기대요.<small>한 번 더 쓰다듬어도 좋아요.</small><button class="btn main tip-go" id="catPet" type="button">한 번 더 쓰다듬기</button>',6000,true)},150)}
-  document.addEventListener('click',e=>{if(e.target&&e.target.id==='catPet')pet()});
-  function meet(onGround){if(typeof me==='undefined'||!me.char)return;const d=Math.hypot(g.position.x-me.x,g.position.z-me.z);
-    if(!near&&onGround&&me.mode!=='sit'&&d<1.5&&performance.now()-lastIntro>20000){near=true;lastIntro=performance.now();
-      if(tipSay)tipSay('다정 나무 아래 사는 고양이예요. 아직 이름이 없어요.<small>가만히 다가가 쓰다듬어 볼까요?</small><button class="btn main tip-go" id="catPet" type="button">쓰다듬기</button>',9000,true)}
-    if(near&&d>2.6)near=false}
+  let poked=0,petYaw=0,near=false,lastIntro=-1e9,lastNear=-1e9,ground=false,hold=null,wasPet=false,petEnd=-1e9;const tip=$('dolTip');let tipT=null;
+  const PET_MS=15000,petting=()=>typeof me!=='undefined'&&me.char&&me.char.petUntil>performance.now();
+  const bar=$('petBar');
+  function pet(){if(typeof me==='undefined'||!me.char||me.mode!=='walk')return;
+    if(!ground){if(tipSay)tipSay('고양이가 지금은 나무 위에 있어요.<small>내려오면 다시 쓰다듬어 볼까요?</small>',4000,true);return}
+    let dx=g.position.x-me.x,dz=g.position.z-me.z;const d=Math.hypot(dx,dz)||1;
+    const R=.55;me.x=g.position.x-dx/d*R;me.z=g.position.z-dz/d*R;dx=dx/d*R;dz=dz/d*R;   // step up close, on whichever side you came from
+    hold={x:g.position.x,z:g.position.z};                                               // the cat stays right where it is
+    me.ry=Math.atan2(-dx,-dz);me.char.speed=0;me.char.petAt=performance.now();me.char.petUntil=me.char.petAt+PET_MS;
+    if(typeof camT!=='undefined')Object.assign(camT,{th:me.ry+2.0,el:.26,r:2.4});        // from the side and a little in front: your face, your hand, the cat
+    petYaw=Math.atan2(dz,-dx);poked=performance.now()+1500;
+    setTimeout(()=>{if(tipSay)tipSay('골골골… 고양이가 앉아서 손에 머리를 기대요.',3200,true)},150)}
+  function stopPet(){if(typeof me!=='undefined'&&me.char)me.char.petUntil=0}
+  document.addEventListener('click',e=>{if(!e.target)return;if(e.target.id==='catPet')pet();if(e.target.id==='catStop')stopPet()});
+  function meet(){if(typeof me==='undefined'||!me.char)return;const d=Math.hypot(g.position.x-me.x,g.position.z-me.z),now=performance.now();
+    if(!near&&ground&&me.mode==='walk'&&!petting()&&d<1.3&&now-lastNear>4000){near=true;
+      const first=now-lastIntro>60000;lastIntro=now;
+      if(tipSay)tipSay((first?'다정 나무 아래 사는 고양이예요. 아직 이름이 없어요.':'고양이가 가만히 올려다봐요.')+'<small>쓰다듬어 볼까요?</small><button class="btn main tip-go" id="catPet" type="button">쓰다듬기</button>',9000,true)}
+    if(near&&d>1.9){near=false;lastNear=now}}
+  function nearMe(){return typeof me!=='undefined'&&Math.hypot(g.position.x-me.x,g.position.z-me.z)<2.4}
+  function solid(){return ground?g.position:null}
   function poke(){poked=performance.now();tip.textContent='고양이가 눈을 가늘게 떴어요 · 골골';tip.hidden=false;clearTimeout(tipT);tipT=setTimeout(()=>{tip.hidden=true;tip.textContent='저 멀리 참돌고래가 뛰었어요 🐬'},3200)}
   function tick(now,alt){const T=Date.now(),t=now/1000;let x,z,yaw,pose,walking=false,y=null,climb=0;
     if(alt<-6){({x,z}=NIGHT);yaw=NIGHT.face;pose='sprawl'}
@@ -763,8 +775,11 @@ const teaCat=(()=>{const hv=n=>{const x=Math.sin(n*45.164+3.71)*43758.5453;retur
           else{const v=(tt-.25)/.7;arc(TRUNK,BASE,TRUNK_Y,0,.22,v);pose='walk';climb=v<.5?-.25:-.75}}}   // and one leap to the ground
       else if(s.type==='along'){const v=s.out?u:1-u;x=TRUNK.x+(PERCH.x-TRUNK.x)*v;z=TRUNK.z+(PERCH.z-TRUNK.z)*v;y=GROUND+TRUNK_Y+(PERCH_Y-TRUNK_Y)*v;yaw=Math.atan2(-(PERCH.z-TRUNK.z),PERCH.x-TRUNK.x)+(s.out?0:Math.PI);pose='walk'}
       else{x=s.p.x;z=s.p.z;if(s.p.y)y=GROUND+s.p.y;yaw=s.face;pose=s.pose}}
-    if(performance.now()<petUntil&&y==null){pose='loaf';yaw=petYaw}   // wakes and settles toward your hand while being petted
-    meet(y==null&&!climb);
+    const pe=petting();if(wasPet&&!pe)petEnd=performance.now();if(pe!==wasPet)bar.hidden=!pe;wasPet=pe;
+    if(pe&&hold){x=hold.x;z=hold.z;y=null;climb=0;pose='sit';yaw=petYaw}            // sits up right there, facing your hand
+    else if(hold){const u=(performance.now()-petEnd)/2200;
+      if(u>=1||y!=null)hold=null;else{const sx=x,sz=z;x=hold.x+(sx-hold.x)*u;z=hold.z+(sz-hold.z)*u;if(Math.hypot(sx-hold.x,sz-hold.z)>.15){pose='walk';yaw=Math.atan2(-(sz-hold.z),sx-hold.x)}}}   // then pads back to where it was going
+    ground=y==null&&!climb;meet();
     g.position.set(x,y!=null?y:floorAt(x,z),z);
     g.rotation.order='YZX';g.rotation.z+=(climb-g.rotation.z)*.35;   // the body follows the leap: nose up going up, nose down coming down
     const cur=g.rotation.y;let dy=yaw-cur;dy=Math.atan2(Math.sin(dy),Math.cos(dy));g.rotation.y=cur+dy*.08;
@@ -780,7 +795,7 @@ const teaCat=(()=>{const hv=n=>{const x=Math.sin(n*45.164+3.71)*43758.5453;retur
     if(pose==='loaf'){shut=.6;hp=-.05}
     if(pose==='sleep'){shut=1}
     if(pk>0){shut=Math.max(shut*(1-pk),pk*.8);hp-=pk*.25}
-    if(performance.now()<petUntil){const w=Math.sin((petUntil-performance.now())/4500*Math.PI);shut=1;hp=-.45*w+Math.sin(t*6)*.05;hy=Math.sin(t*2.2)*.25}
+    if(pe){shut=1;hp=-.35+Math.sin(t*6)*.05;hy=Math.sin(t*2.2)*.25}
     hip.rotation.z+=(pitch-hip.rotation.z)*.1;hip.rotation.x+=(roll-hip.rotation.x)*.08;stand.position.y+=(lift-stand.position.y)*.2;
     legs.forEach((L,i)=>{let a=0,sy=1;
       if(pose==='walk')a=Math.sin(t*7.5+(i===0||i===3?0:Math.PI))*.36;
@@ -796,7 +811,7 @@ const teaCat=(()=>{const hv=n=>{const x=Math.sin(n*45.164+3.71)*43758.5453;retur
     segs.forEach((sg,i)=>{const sway=Math.sin(t*(pose==='walk'?3:1.2)-i*.45)*(pose==='walk'?.16:.1);
       sg.rotation.y=roll?.03:sway;sg.rotation.z=i===0?(pose==='walk'?.55:pitch?-1.1:.2):(i<4?-.05:-.12)})}
   const headW=new THREE.Vector3();function headAt(){head.getWorldPosition(headW);headW.y+=.07;return headW}
-  return{tick,poke,pet,g,headAt}})();
+  return{tick,poke,pet,g,headAt,petting,nearMe,solid,stopPet}})();
 
 /* ===== autumn: 단풍잎 and 은행잎 on the yard, a few drifting down ===== */
 const LEAF_COLS=['#b4502a','#c8702c','#d89a3c','#9a3a22','#c9a24a','#a8622a','#e0b552'];
@@ -1283,16 +1298,16 @@ const cv=$('gl'),joyEl=$('joy'),knob=$('knob');
 const ptrs=new Map(),keys=new Set();let pinch0=null,joy=null;
 const camS={th:0,el:.3,r:4.6},camT={...camS};
 cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  if(ptrs.size===1&&me.mode==='walk'){joy={x0:e.clientX,y0:e.clientY,dx:0,dy:0,th:camS.th};joyEl.style.left=e.clientX+'px';joyEl.style.top=e.clientY+'px';joyEl.hidden=false;knob.style.transform=''}
+  if(ptrs.size===1&&me.mode==='walk'&&!teaCat.petting()){joy={x0:e.clientX,y0:e.clientY,dx:0,dy:0,th:camS.th};joyEl.style.left=e.clientX+'px';joyEl.style.top=e.clientY+'px';joyEl.hidden=false;knob.style.transform=''}
   if(ptrs.size===2){joy=null;joyEl.hidden=true;const [a,b]=[...ptrs.values()];pinch0={d:Math.hypot(a.x-b.x,a.y-b.y),r:camT.r}}});
 cv.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);if(!p)return;
   if(ptrs.size===1){if(joy){let dx=e.clientX-joy.x0,dy=e.clientY-joy.y0;const m=Math.hypot(dx,dy),max=70;if(m>max){dx*=max/m;dy*=max/m}joy.dx=dx/max;joy.dy=dy/max;knob.style.transform=`translate(${dx}px,${dy}px)`}
     else{camT.th-=(e.clientX-p.x)*.0065;camT.el=clamp(camT.el+(e.clientY-p.y)*.0045,.05,1.2)}}
   p.x=e.clientX;p.y=e.clientY;
-  if(ptrs.size===2&&pinch0){const [a,b]=[...ptrs.values()];camT.r=clamp(pinch0.r*pinch0.d/Math.max(20,Math.hypot(a.x-b.x,a.y-b.y)),2.2,16)}});
-const up=e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch0=null;if(ptrs.size===0){joy=null;joyEl.hidden=true;if(me.mode==='walk')camT.th=me.ry}};
+  if(ptrs.size===2&&pinch0){const [a,b]=[...ptrs.values()];camT.r=clamp(pinch0.r*pinch0.d/Math.max(20,Math.hypot(a.x-b.x,a.y-b.y)),teaCat.petting()?.8:2.2,16)}});
+const up=e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch0=null;if(ptrs.size===0){joy=null;joyEl.hidden=true;if(me.mode==='walk'&&!teaCat.petting())camT.th=me.ry}};
 cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
-cv.addEventListener('wheel',e=>{e.preventDefault();camT.r=clamp(camT.r*Math.exp(e.deltaY*.001),2.2,16)},{passive:false});
+cv.addEventListener('wheel',e=>{e.preventDefault();camT.r=clamp(camT.r*Math.exp(e.deltaY*.001),teaCat.petting()?.8:2.2,16)},{passive:false});
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;
   if((e.key==='Enter'||e.key===' ')&&me.mode==='walk'&&nearSeat!=null&&nearSeat>=0){e.preventDefault();sitAt(nearSeat);return}
   if(e.key.startsWith('Arrow'))e.preventDefault();keys.add(e.key.toLowerCase());if(e.key==='Escape'&&document.body.classList.contains('cha'))toggleCha(false)});
@@ -1323,6 +1338,7 @@ function moveMe(dt){
   else if(!inDoor&&Math.abs(nz-WALL_Z)<.45&&Math.abs(nx)<2.2&&Math.abs(mz)>.5)nx-=Math.sign(nx)*Math.min(Math.abs(nx),dt*1.2);
   if(inside(nx,nz)){nx=clamp(nx,-ROOM_X,ROOM_X);nz=Math.max(nz,-4.55);if(!inDoor)nz=Math.min(nz,WALL_Z-.3)}
   else{nx=clamp(nx,-YARD_X,YARD_X);nz=Math.min(nz,YARD_Z);if(!inDoor)nz=Math.max(nz,WALL_Z+.3)}
+  {const cp=teaCat.solid();if(cp){const ddx=nx-cp.x,ddz=nz-cp.z,dd=Math.hypot(ddx,ddz),R=.42;if(dd<R){const k=(dd||1e-3);nx=cp.x+ddx/k*R;nz=cp.z+ddz/k*R}}}   // the cat is solid: you go round it
   me.x=nx;me.z=nz;me.ry=angLerp(me.ry,Math.atan2(-mx,-mz),Math.min(1,dt*5));me.char.speed=sp;
   if(!joy)camT.th=angLerp(camT.th,me.ry,Math.min(1,dt*.8));
   movedAt=performance.now();
@@ -1557,7 +1573,7 @@ setInterval(renderGreets,3000);
 function fitView(){const vv=window.visualViewport,h=vv?vv.height+vv.offsetTop:innerHeight,m=Math.max(0,Math.round(innerHeight-h)),cut=KAKAO&&m<20?KAKAO_BAR:m;document.documentElement.style.setProperty('--vb',cut+'px')}
 function resize(){fitView();const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);cam.aspect=w/h;cam.fov=w/h<.8?62:50;cam.updateProjectionMatrix()}
 addEventListener('resize',resize);resize();try{visualViewport.addEventListener('resize',fitView)}catch(e){}
-const tgt=new THREE.Vector3();
+const tgt=new THREE.Vector3();let petCam=0,wasPetCam=false;
 // the first steep of every tea: while the leaves go from the caddy into the 다관, the view leans in to the hands, then settles back
 const REDUCE_MOTION=(()=>{try{return matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){return false}})();
 const leafCam={at:0,skip:false},fP=new THREE.Vector3(),fT=new THREE.Vector3(),fA=new THREE.Vector3(),fB=new THREE.Vector3();
@@ -1568,6 +1584,8 @@ function leafFocus(){if(me.mode!=='sit'||me.act!=='cd2tp'||me.seat<0||!seats[me.
 function updateCam(){
   camS.th=angLerp(camS.th,camT.th,.12);camS.el+=(camT.el-camS.el)*.12;camS.r+=(camT.r-camS.r)*.12;
   const c=me.char.g.position;tgt.set(c.x,c.y+(me.mode==='sit'?.95:1.15),c.z+(me.mode==='sit'?-.4:0));
+  {const pk=teaCat.petting()?1:0;petCam+=(pk-petCam)*.08;if(petCam>.001){const hd=teaCat.headAt();fA.set((c.x+hd.x)/2,hd.y+.12,(c.z+hd.z)/2);tgt.lerp(fA,petCam)}
+   if(!pk&&wasPetCam){camT.r=Math.max(camT.r,4.6);camT.th=me.ry}wasPetCam=!!pk}
   const ce=Math.cos(camS.el);
   cam.position.set(tgt.x+Math.sin(camS.th)*ce*camS.r,tgt.y+Math.sin(camS.el)*camS.r,tgt.z+Math.cos(camS.th)*ce*camS.r);   // the view stays put while brewing
   cam.position.y=Math.max(cam.position.y,.5);
@@ -1684,8 +1702,10 @@ function frame(now){
     if(pr.mode!=='sit'){c.reachE=0;c.reachLE=0}
     if(key==='me'){if(c.speed>.05)c.petUntil=0;                                            // walking off ends it
       const petting=c.petUntil>performance.now();if(petting&&pr.mode!=='sit')setPose(c,'sit');else if(!petting&&pr.mode!=='sit'&&c.pose==='sit')setPose(c,'stand')}   // crouch down beside it, then get up
-    if(key==='me'&&c.petUntil>performance.now()){const left=(c.petUntil-performance.now())/4500,w=Math.sin(Math.min(1,(1-left)/.18)*Math.PI/2)*Math.min(1,left/.15);   // the hand goes out, strokes, comes back
-      c.reachE=w;c.reachW=teaCat.headAt().clone().add(new THREE.Vector3(Math.sin(now/260)*.05,Math.abs(Math.sin(now/260))*.03,0));bow=Math.max(bow,.45*w)}
+    if(key==='me'&&c.petUntil>performance.now()){const into=(performance.now()-(c.petAt||0))/1000,left=(c.petUntil-performance.now())/1000;
+      const hd=teaCat.headAt(),far=Math.hypot(hd.x-me.x,hd.z-me.z);   // never reach further than an arm: no rubber arms
+      const w=Math.min(1,Math.max(0,into/.8))*Math.min(1,left/.6)*Math.min(1,Math.max(0,(1-far)/.25));
+      c.reachE=w;c.reachW=hd.clone().add(new THREE.Vector3(Math.sin(now/300)*.05,Math.abs(Math.sin(now/300))*.03,0));bow=Math.max(bow,.45*w)}
     animateChar(c,now,dt,{bow,lift,hold,full:!!pr.drink,level:+pr.cup||0,cha:key==='me'&&document.body.classList.contains('cha')})};
   anim('me',me.char,me);for(const [k,o] of others)anim(k,o.char,o.pr);
   updateCam();
@@ -1771,7 +1791,7 @@ $('gbForm').onsubmit=async e=>{e.preventDefault();if(gbBusy)return;
   cvs.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,t:performance.now()}});
   cvs.addEventListener('pointerup',e=>{if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>8||performance.now()-down.t>500){down=null;return}down=null;
     const r=cvs.getBoundingClientRect();ndc.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);ray.setFromCamera(ndc,cam);
-    if(ray.intersectObject(teaCat.g,true).length){teaCat.poke();return}
+    if(ray.intersectObject(teaCat.g,true).length){if(teaCat.nearMe()&&!teaCat.petting()&&me.mode==='walk')teaCat.pet();else teaCat.poke();return}
     if(ray.intersectObject(knotTree.board,false).length){signTip();return}
     if(way.count&&ray.intersectObject(way,false).length){$('treeGo').onclick();return}
     const hit=ray.intersectObject(knotTree.strips,false)[0];if(!hit||hit.instanceId==null||!knots[hit.instanceId]){if(!tip.hidden){clearTimeout(tipTimer);tip.hidden=true}return}const k=knots[hit.instanceId];
@@ -2066,7 +2086,7 @@ let sbOne=null;function sbClient(){if(sbOne)return sbOne;if(!window.supabase)ret
   try{sbOne=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},realtime:{params:{eventsPerSecond:10}}})}catch(e){sbOne=null}return sbOne}
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
-const APP_V='106';
+const APP_V='107';
 $('ver').textContent='v'+APP_V;
 function connectRoom(){
   // Presence only says who is here (tracked once per connection). Everything else rides broadcasts:
