@@ -735,7 +735,18 @@ const teaCat=(()=>{const hv=n=>{const x=Math.sin(n*45.164+3.71)*43758.5453;retur
     else{walk(at,en);at=en}
     rest({x:en.x,z:en.z,y:0},en.pose,en.face,1e9);   // and stays so till the next stretch
     plans.set(k,steps);if(plans.size>6)plans.delete(plans.keys().next().value);return steps}
-  let poked=0;const tip=$('dolTip');let tipT=null;
+  let poked=0,petUntil=0,petYaw=0,near=false,lastIntro=-1e9;const tip=$('dolTip');let tipT=null;
+  function pet(){let dx=g.position.x-me.x,dz=g.position.z-me.z;const d=Math.hypot(dx,dz)||1;
+    if(d>.6){me.x=g.position.x-dx/d*.55;me.z=g.position.z-dz/d*.55;dx=dx/d*.55;dz=dz/d*.55}   // step up close
+    me.ry=Math.atan2(-dx,-dz);me.char.petUntil=performance.now()+4500;                      // turn to it, lean in and reach out a hand
+    if(typeof camT!=='undefined'){camT.th=me.ry+1.35;camT.el=.3}                           // see it from the side: you and the cat
+    petUntil=performance.now()+4500;petYaw=Math.atan2(dz,-dx);poked=performance.now()+1500;
+    setTimeout(()=>{if(tipSay)tipSay('골골골… 고양이가 눈을 감고 손에 머리를 기대요.<small>한 번 더 쓰다듬어도 좋아요.</small><button class="btn main tip-go" id="catPet" type="button">한 번 더 쓰다듬기</button>',6000,true)},150)}
+  document.addEventListener('click',e=>{if(e.target&&e.target.id==='catPet')pet()});
+  function meet(onGround){if(typeof me==='undefined'||!me.char)return;const d=Math.hypot(g.position.x-me.x,g.position.z-me.z);
+    if(!near&&onGround&&me.mode!=='sit'&&d<1.5&&performance.now()-lastIntro>20000){near=true;lastIntro=performance.now();
+      if(tipSay)tipSay('다정 나무 아래 사는 고양이예요. 아직 이름이 없어요.<small>가만히 다가가 쓰다듬어 볼까요?</small><button class="btn main tip-go" id="catPet" type="button">쓰다듬기</button>',9000,true)}
+    if(near&&d>2.6)near=false}
   function poke(){poked=performance.now();tip.textContent='고양이가 눈을 가늘게 떴어요 · 골골';tip.hidden=false;clearTimeout(tipT);tipT=setTimeout(()=>{tip.hidden=true;tip.textContent='저 멀리 참돌고래가 뛰었어요 🐬'},3200)}
   function tick(now,alt){const T=Date.now(),t=now/1000;let x,z,yaw,pose,walking=false,y=null,climb=0;
     if(alt<-6){({x,z}=NIGHT);yaw=NIGHT.face;pose='sprawl'}
@@ -752,6 +763,8 @@ const teaCat=(()=>{const hv=n=>{const x=Math.sin(n*45.164+3.71)*43758.5453;retur
           else{const v=(tt-.25)/.7;arc(TRUNK,BASE,TRUNK_Y,0,.22,v);pose='walk';climb=v<.5?-.25:-.75}}}   // and one leap to the ground
       else if(s.type==='along'){const v=s.out?u:1-u;x=TRUNK.x+(PERCH.x-TRUNK.x)*v;z=TRUNK.z+(PERCH.z-TRUNK.z)*v;y=GROUND+TRUNK_Y+(PERCH_Y-TRUNK_Y)*v;yaw=Math.atan2(-(PERCH.z-TRUNK.z),PERCH.x-TRUNK.x)+(s.out?0:Math.PI);pose='walk'}
       else{x=s.p.x;z=s.p.z;if(s.p.y)y=GROUND+s.p.y;yaw=s.face;pose=s.pose}}
+    if(performance.now()<petUntil&&y==null){pose='loaf';yaw=petYaw}   // wakes and settles toward your hand while being petted
+    meet(y==null&&!climb);
     g.position.set(x,y!=null?y:floorAt(x,z),z);
     g.rotation.order='YZX';g.rotation.z+=(climb-g.rotation.z)*.35;   // the body follows the leap: nose up going up, nose down coming down
     const cur=g.rotation.y;let dy=yaw-cur;dy=Math.atan2(Math.sin(dy),Math.cos(dy));g.rotation.y=cur+dy*.08;
@@ -767,6 +780,7 @@ const teaCat=(()=>{const hv=n=>{const x=Math.sin(n*45.164+3.71)*43758.5453;retur
     if(pose==='loaf'){shut=.6;hp=-.05}
     if(pose==='sleep'){shut=1}
     if(pk>0){shut=Math.max(shut*(1-pk),pk*.8);hp-=pk*.25}
+    if(performance.now()<petUntil){const w=Math.sin((petUntil-performance.now())/4500*Math.PI);shut=1;hp=-.45*w+Math.sin(t*6)*.05;hy=Math.sin(t*2.2)*.25}
     hip.rotation.z+=(pitch-hip.rotation.z)*.1;hip.rotation.x+=(roll-hip.rotation.x)*.08;stand.position.y+=(lift-stand.position.y)*.2;
     legs.forEach((L,i)=>{let a=0,sy=1;
       if(pose==='walk')a=Math.sin(t*7.5+(i===0||i===3?0:Math.PI))*.36;
@@ -781,7 +795,8 @@ const teaCat=(()=>{const hv=n=>{const x=Math.sin(n*45.164+3.71)*43758.5453;retur
     const br=(pose==='sleep'||pose==='sprawl'||pose==='loaf')?Math.sin(t*1.6)*.035:0;mound.scale.y=.46*(1+br);torso.scale.x=1+br*.5;
     segs.forEach((sg,i)=>{const sway=Math.sin(t*(pose==='walk'?3:1.2)-i*.45)*(pose==='walk'?.16:.1);
       sg.rotation.y=roll?.03:sway;sg.rotation.z=i===0?(pose==='walk'?.55:pitch?-1.1:.2):(i<4?-.05:-.12)})}
-  return{tick,poke,g}})();
+  const headW=new THREE.Vector3();function headAt(){head.getWorldPosition(headW);headW.y+=.07;return headW}
+  return{tick,poke,pet,g,headAt}})();
 
 /* ===== autumn: 단풍잎 and 은행잎 on the yard, a few drifting down ===== */
 const LEAF_COLS=['#b4502a','#c8702c','#d89a3c','#9a3a22','#c9a24a','#a8622a','#e0b552'];
@@ -1667,6 +1682,10 @@ function frame(now){
     if(key==='me'){const top=lift>.9;if(top&&!c.atTop)sipped();c.atTop=top}
     if(bow>.05)hold=false;
     if(pr.mode!=='sit'){c.reachE=0;c.reachLE=0}
+    if(key==='me'){if(c.speed>.05)c.petUntil=0;                                            // walking off ends it
+      const petting=c.petUntil>performance.now();if(petting&&pr.mode!=='sit')setPose(c,'sit');else if(!petting&&pr.mode!=='sit'&&c.pose==='sit')setPose(c,'stand')}   // crouch down beside it, then get up
+    if(key==='me'&&c.petUntil>performance.now()){const left=(c.petUntil-performance.now())/4500,w=Math.sin(Math.min(1,(1-left)/.18)*Math.PI/2)*Math.min(1,left/.15);   // the hand goes out, strokes, comes back
+      c.reachE=w;c.reachW=teaCat.headAt().clone().add(new THREE.Vector3(Math.sin(now/260)*.05,Math.abs(Math.sin(now/260))*.03,0));bow=Math.max(bow,.45*w)}
     animateChar(c,now,dt,{bow,lift,hold,full:!!pr.drink,level:+pr.cup||0,cha:key==='me'&&document.body.classList.contains('cha')})};
   anim('me',me.char,me);for(const [k,o] of others)anim(k,o.char,o.pr);
   updateCam();
@@ -1709,7 +1728,7 @@ let gbSb=null;
 const gbClient=()=>sbClient();
 const cleanKnot=r=>{if(!r||typeof r!=='object')return null;const name=cleanText(String(r.name||''),12).trim(),message=cleanText(String(r.message||''),80).trim();if(!message)return null;
   return{id:+r.id||0,at:Date.parse(r.created_at)||Date.now(),name:name||'손님',message,tea:TEAS.some(t=>t.k===r.tea)?r.tea:null,color:HEX.test(r.color||'')?r.color:ROBES[0]}};
-let signTip=()=>{},knots=[],gbOffset=0,gbBusy=false,knotsAt=0,knotTimer=null;
+let tipSay=null,signTip=()=>{},knots=[],gbOffset=0,gbBusy=false,knotsAt=0,knotTimer=null;
 const gbSelect='id,created_at,name,message,tea,color';
 async function loadKnots(){const c=gbClient();if(!c)return;knotsAt=Date.now();
   try{const {data,error}=await c.from('guestbook').select(gbSelect).eq('place',PLACE).order('created_at',{ascending:false}).limit(KNOT_MAX);
@@ -1747,6 +1766,7 @@ $('gbForm').onsubmit=async e=>{e.preventDefault();if(gbBusy)return;
     const tip=$('knotTip'),say=(html,ms,act)=>{tip.innerHTML=html;tip.hidden=false;tip.style.pointerEvents='auto';clearTimeout(tipTimer);tipTimer=setTimeout(()=>{tip.hidden=true},ms);
       const go=$('tipGo');if(go)go.onclick=()=>{tip.hidden=true;openGb();setTimeout(()=>{try{$('gbMsg').focus()}catch(e){}},200)}};
     tip.onclick=e=>{if(e.target&&e.target.id==='tipGo')return;clearTimeout(tipTimer);tip.hidden=true};
+    tipSay=say;
     signTip=()=>{const n=Math.min(knots.length,KNOT_MAX);say(`${n?`다정 나무에는 최근 방명록 ${n}장이 카드로 매달려 있어요.`:'다정 나무에는 방명록이 카드로 매달려요.'}<small>${n?'카드를 누르면 읽을 수 있어요 · ':''}지금 한 줄 남겨 보세요.</small><button class="btn main tip-go" id="tipGo" type="button">한 줄 남기러 가기</button>`,8000,true);};
   cvs.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,t:performance.now()}});
   cvs.addEventListener('pointerup',e=>{if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>8||performance.now()-down.t>500){down=null;return}down=null;
@@ -2046,7 +2066,7 @@ let sbOne=null;function sbClient(){if(sbOne)return sbOne;if(!window.supabase)ret
   try{sbOne=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},realtime:{params:{eventsPerSecond:10}}})}catch(e){sbOne=null}return sbOne}
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
-const APP_V='104';
+const APP_V='106';
 $('ver').textContent='v'+APP_V;
 function connectRoom(){
   // Presence only says who is here (tracked once per connection). Everything else rides broadcasts:
