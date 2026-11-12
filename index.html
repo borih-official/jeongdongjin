@@ -366,7 +366,7 @@ const TEAS=[{k:'green',n:'녹차',c:'#a7b04e'},{k:'white',n:'백차',c:'#d8c27c'
 const ROBES=['#8fa68a','#c4b07a','#8c7b6b','#7a9e9a','#bccdb7','#a89860','#9e9b8c','#d4cfc6','#6b8a68','#b39b7d','#86a3a0','#e8dfc8'];
 /* ===== settings ===== */
 const PLACE='정동진';                                   // this tea room
-const OPEN_END=Date.UTC(2026,10,16,15,0);               // 2026-11-17 00:00 KST: the room closes and points to the next sunrise spot
+const OPEN_END=Infinity;                                 // open for good (was 2026-11-17 00:00 KST). Put a Date.UTC(...) back here to close it and point to NEXT_PLACE
 const NEXT_PLACE='';                                    // e.g. '호미곶' once decided
 const NEXT_URL='';                                      // e.g. 'https://borih-official.github.io/homigot/'
 const SPEED=1.35;
@@ -1295,18 +1295,21 @@ const inside=(x,z)=>z<WALL_Z;
 
 /* ===== input: drag to walk, drag to look while seated, pinch or wheel to zoom ===== */
 const cv=$('gl'),joyEl=$('joy'),knob=$('knob');
-const ptrs=new Map(),keys=new Set();let pinch0=null,joy=null;
+const ptrs=new Map(),keys=new Set();let pinch0=null,joy=null,turned=false;
 const camS={th:0,el:.3,r:4.6},camT={...camS};
-cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+cv.addEventListener('pointerdown',e=>{if(e.isPrimary||e.pointerType==='mouse'){ptrs.clear();pinch0=null;joy=null}   // a fresh gesture: forget fingers the browser never let go of
+  try{cv.setPointerCapture(e.pointerId)}catch(_){}ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(ptrs.size===1&&me.mode==='walk'&&!teaCat.petting()){joy={x0:e.clientX,y0:e.clientY,dx:0,dy:0,th:camS.th};joyEl.style.left=e.clientX+'px';joyEl.style.top=e.clientY+'px';joyEl.hidden=false;knob.style.transform=''}
-  if(ptrs.size===2){joy=null;joyEl.hidden=true;const [a,b]=[...ptrs.values()];pinch0={d:Math.hypot(a.x-b.x,a.y-b.y),r:camT.r}}});
+  if(ptrs.size===2){joy=null;joyEl.hidden=true;const [a,b]=[...ptrs.values()];pinch0={d:Math.hypot(a.x-b.x,a.y-b.y),r:camT.r,mx:(a.x+b.x)/2,my:(a.y+b.y)/2}}});
 cv.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);if(!p)return;
   if(ptrs.size===1){if(joy){let dx=e.clientX-joy.x0,dy=e.clientY-joy.y0;const m=Math.hypot(dx,dy),max=70;if(m>max){dx*=max/m;dy*=max/m}joy.dx=dx/max;joy.dy=dy/max;knob.style.transform=`translate(${dx}px,${dy}px)`}
     else{camT.th-=(e.clientX-p.x)*.0065;camT.el=clamp(camT.el+(e.clientY-p.y)*.0045,.05,1.2)}}
   p.x=e.clientX;p.y=e.clientY;
-  if(ptrs.size===2&&pinch0){const [a,b]=[...ptrs.values()];camT.r=clamp(pinch0.r*pinch0.d/Math.max(20,Math.hypot(a.x-b.x,a.y-b.y)),teaCat.petting()?.8:2.2,16)}});
-const up=e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch0=null;if(ptrs.size===0){joy=null;joyEl.hidden=true;if(me.mode==='walk'&&!teaCat.petting())camT.th=me.ry}};
-cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+  if(ptrs.size===2&&pinch0){const [a,b]=[...ptrs.values()];camT.r=clamp(pinch0.r*pinch0.d/Math.max(20,Math.hypot(a.x-b.x,a.y-b.y)),teaCat.petting()?.8:2.2,16);
+    const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;camT.th-=(mx-pinch0.mx)*.0065;camT.el=clamp(camT.el+(my-pinch0.my)*.0045,.05,1.2);pinch0.mx=mx;pinch0.my=my;turned=true}});
+const up=e=>{if(!ptrs.delete(e.pointerId))return;if(ptrs.size<2)pinch0=null;if(ptrs.size===0){joy=null;joyEl.hidden=true;if(me.mode==='walk'&&!teaCat.petting()&&!turned)camT.th=me.ry;turned=false}};
+addEventListener('blur',()=>{ptrs.clear();pinch0=null;joy=null;joyEl.hidden=true});document.addEventListener('visibilitychange',()=>{if(document.hidden){ptrs.clear();pinch0=null;joy=null;joyEl.hidden=true}});
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);cv.addEventListener('lostpointercapture',up);
 cv.addEventListener('wheel',e=>{e.preventDefault();camT.r=clamp(camT.r*Math.exp(e.deltaY*.001),teaCat.petting()?.8:2.2,16)},{passive:false});
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;
   if((e.key==='Enter'||e.key===' ')&&me.mode==='walk'&&nearSeat!=null&&nearSeat>=0){e.preventDefault();sitAt(nearSeat);return}
@@ -1578,9 +1581,10 @@ const tgt=new THREE.Vector3();let petCam=0,wasPetCam=false;
 const REDUCE_MOTION=(()=>{try{return matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){return false}})();
 const leafCam={at:0,skip:false},fP=new THREE.Vector3(),fT=new THREE.Vector3(),fA=new THREE.Vector3(),fB=new THREE.Vector3();
 function leafFocus(){if(me.mode!=='sit'||me.act!=='cd2tp'||me.seat<0||!seats[me.seat])return 0;
-  if(leafCam.at!==me.actAt){leafCam.at=me.actAt;leafCam.skip=REDUCE_MOTION||ptrs.size>0}
+  if(leafCam.at!==me.actAt){leafCam.at=me.actAt;leafCam.skip=REDUCE_MOTION||ptrs.size>0;leafCam.rel=0}
   if(leafCam.skip)return 0;const k=(Date.now()-me.actAt)/ACT_MS;if(k<0||k>1)return 0;
-  const sm=x=>x*x*(3-2*x);return k<.16?sm(k/.16):k>.84?sm((1-k)/.16):1}
+  if(ptrs.size>0&&!leafCam.rel)leafCam.rel=Date.now();const let_go=leafCam.rel?Math.max(0,1-(Date.now()-leafCam.rel)/400):1;if(!let_go){leafCam.skip=true;return 0}   // you touched: the view is yours again
+  const sm=x=>x*x*(3-2*x);return (k<.16?sm(k/.16):k>.84?sm((1-k)/.16):1)*let_go}
 function updateCam(){
   camS.th=angLerp(camS.th,camT.th,.12);camS.el+=(camT.el-camS.el)*.12;camS.r+=(camT.r-camS.r)*.12;
   const c=me.char.g.position;tgt.set(c.x,c.y+(me.mode==='sit'?.95:1.15),c.z+(me.mode==='sit'?-.4:0));
@@ -1967,9 +1971,8 @@ function tick(){
   const note=left>0&&left<180?` · 해 뜨기까지 ${left}분`:left<=0&&left>-40?' · 해가 떴어요':lss>0&&lss<120?` · 해 지기까지 ${lss}분`:lss<=0&&lss>-40?' · 해가 졌어요':'';
   $('sr').innerHTML=`정동진 일출 <b>${hm(sr)}</b> · 일몰 <b>${hm(ss)}</b>${note}`;
   // 정동진 차실: open any time for two weeks, then the tea room moves to the next sunrise spot
-  const daysLeft=Math.ceil((OPEN_END-now)/864e5);
   if(now>=OPEN_END)closeRoom();
-  $('status').innerHTML=now<OPEN_END?`<span class="dot on"></span><b>정동진 차실</b> · 11월 16일까지 열려 있어요${daysLeft<=3?` · ${daysLeft}일 남음`:''}`:`<span class="dot"></span>정동진 차실은 닫혔어요 · 다음 일출 맛집에서 만나요`;
+  $('status').innerHTML=now<OPEN_END?`<span class="dot on"></span><b>정동진 차실</b>`:`<span class="dot"></span>정동진 차실은 닫혔어요 · 다음 일출 맛집에서 만나요`;
   if(me.mode==='walk')$('hint').textContent=inside(me.x,me.z)?(TOUCH?'빈 방석 앞에 서면 앉기 버튼이 나와요':'빈 방석 앞에 서서 Enter를 누르거나 앉기 버튼을 눌러요'):(TOUCH?'화면을 끌어 걸어보세요 · 출입문으로 들어가요':'마우스로 끌거나 방향키(WASD)로 걸어요 · 출입문으로 들어가요');
 }
 setInterval(tick,1000);tick();
@@ -2086,7 +2089,7 @@ let sbOne=null;function sbClient(){if(sbOne)return sbOne;if(!window.supabase)ret
   try{sbOne=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},realtime:{params:{eventsPerSecond:10}}})}catch(e){sbOne=null}return sbOne}
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
-const APP_V='107';
+const APP_V='109';
 $('ver').textContent='v'+APP_V;
 function connectRoom(){
   // Presence only says who is here (tracked once per connection). Everything else rides broadcasts:
