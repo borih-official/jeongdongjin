@@ -388,6 +388,46 @@ function sun(t){
   const az=Math.atan2(-Math.sin(h),Math.tan(dec)*Math.cos(la)-Math.sin(la)*Math.cos(h));
   return {alt:alt/R,az:(az/R+360)%360};
 }
+/* ===== moon (P. Schlyter's low-precision method with the main perturbations, ~2' in position) ===== */
+// returns where the moon stands over 정동진 (topocentric altitude/azimuth, degrees),
+// how much of it is lit (0..1), whether it is waxing, its age in days, and the moon→sun direction for shading
+function moon(t){
+  const d=t/864e5+2440587.5-2451543.5,rev=x=>((x%360)+360)%360,sd=x=>Math.sin(x*R),cd=x=>Math.cos(x*R);
+  const N=rev(125.1228-.0529538083*d),inc=5.1454,w=rev(318.0634+.1643573223*d),a=60.2666,e=.0549,M=rev(115.3654+13.0649929509*d);
+  const ws=rev(282.9404+4.70935e-5*d),es=.016709-1.151e-9*d,Ms=rev(356.047+.9856002585*d);
+  let E=M+e/R*sd(M)*(1+e*cd(M));for(let k=0;k<4;k++)E=E-(E-e/R*sd(E)-M)/(1-e*cd(E));
+  const xv=a*(cd(E)-e),yv=a*Math.sqrt(1-e*e)*sd(E),v=Math.atan2(yv,xv)/R;let r=Math.hypot(xv,yv);
+  const xh=r*(cd(N)*cd(v+w)-sd(N)*sd(v+w)*cd(inc)),yh=r*(sd(N)*cd(v+w)+cd(N)*sd(v+w)*cd(inc)),zh=r*sd(v+w)*sd(inc);
+  let lon=Math.atan2(yh,xh)/R,lat=Math.atan2(zh,Math.hypot(xh,yh))/R;
+  const Ls=Ms+ws,Lm=M+w+N,D=Lm-Ls,F=Lm-N;
+  lon+=-1.274*sd(M-2*D)+.658*sd(2*D)-.186*sd(Ms)-.059*sd(2*M-2*D)-.057*sd(M-2*D+Ms)+.053*sd(M+2*D)+.046*sd(2*D-Ms)+.041*sd(M-Ms)-.035*sd(D)-.031*sd(M+Ms)-.015*sd(2*F-2*D)+.011*sd(M-4*D);
+  lat+=-.173*sd(F-2*D)-.055*sd(M-F-2*D)-.046*sd(M+F-2*D)+.033*sd(F+2*D)+.017*sd(2*M+F);
+  r+=-.58*cd(M-2*D)-.46*cd(2*D);
+  // the sun's true longitude, for the phase
+  const Es=Ms+es/R*sd(Ms)*(1+es*cd(Ms)),xs=cd(Es)-es,ys=Math.sqrt(1-es*es)*sd(Es),slon=rev(Math.atan2(ys,xs)/R+ws);
+  const ecl=23.4393-3.563e-7*d;
+  const eq=(lo,la)=>{const x=cd(lo)*cd(la),y=sd(lo)*cd(la),z=sd(la);return [x,y*cd(ecl)-z*sd(ecl),y*sd(ecl)+z*cd(ecl)]};
+  const [mx,my,mz]=eq(lon,lat),ra=Math.atan2(my,mx),dec=Math.asin(mz);
+  let gm=(18.697374558+24.06570982441908*(t/864e5+2440587.5-2451545))%24;if(gm<0)gm+=24;
+  const h=(gm*15+LON)*R-ra,la=LAT*R;
+  let alt=Math.asin(Math.sin(la)*Math.sin(dec)+Math.cos(la)*Math.cos(dec)*Math.cos(h));
+  const az=Math.atan2(-Math.sin(h),Math.tan(dec)*Math.cos(la)-Math.sin(la)*Math.cos(h));
+  alt-=Math.asin(1/r)*Math.cos(alt);   // seen from the cliff, not the earth's centre: about a degree lower
+  const elong=Math.acos(clamp(cd(lat)*cd(lon-slon),-1,1))/R;   // sun–moon angle seen from the earth
+  const lit=(1-cd(elong))/2,waxing=rev(lon-slon)<180,age=rev(lon-slon)/360*29.530589;
+  return {alt:alt/R,az:(az/R+360)%360,lit,waxing,age,dist:r};
+}
+// the lunar day as Korean calendars count it: day 1 is the KST date of the new moon
+function lunarDay(t){let tn=t-moon(t).age*864e5;for(let k=0;k<4;k++){let a=moon(tn).age;if(a>15)a-=29.530589;tn-=a*864e5}   // back to the last new moon, then home in on it
+  return Math.round((dayBase(t)-dayBase(tn))/864e5)+1}
+const moonName=m=>m.lit>=.96?'보름달':m.lit<.04?'그믐 지난 삭':m.waxing?(m.lit<.35?'초승달':m.lit<.65?'상현달':'차오르는 달'):(m.lit>.65?'기우는 달':m.lit>.35?'하현달':'그믐달');
+const mrC={};
+function moonTimes(b){if(mrC[b])return mrC[b];let rise=null,set=null,p=moon(b).alt;
+  for(let t=b+10*60e3;t<=b+864e5;t+=10*60e3){const a=moon(t).alt;
+    if(p<-.833&&a>=-.833&&rise==null){let lo=t-10*60e3,hi=t;for(let i=0;i<8;i++){const m=(lo+hi)/2;moon(m).alt<-.833?lo=m:hi=m}rise=hi}
+    if(p>=-.833&&a<-.833&&set==null){let lo=t-10*60e3,hi=t;for(let i=0;i<8;i++){const m=(lo+hi)/2;moon(m).alt>=-.833?lo=m:hi=m}set=hi}
+    p=a}
+  return mrC[b]={rise,set}}
 const kst=t=>new Date(t+H9);
 const hm=t=>{const d=kst(t);return String(d.getUTCHours()).padStart(2,'0')+':'+String(d.getUTCMinutes()).padStart(2,'0')};
 const dayBase=t=>{const d=kst(t);return Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())-H9};
@@ -940,21 +980,54 @@ const starG=new THREE.BufferGeometry(),spts=[];for(let k=0;k<500;k++){const a=Ma
 starG.setAttribute('position',new THREE.Float32BufferAttribute(spts,3));
 const starM=new THREE.PointsMaterial({color:0xf0ece0,size:1.6,sizeAttenuation:false,transparent:true,opacity:0,depthWrite:false});
 const starPts=new THREE.Points(starG,starM);scene.add(starPts);
+const MOON_D=430,MOON_SIZE=2*MOON_D*Math.tan(1.05*R/2);   // drawn twice its real size (0.52°) so it reads on a phone
+U.moonDir={value:new THREE.Vector3(0,1,0)};U.moonI={value:0};
+const moonU={L:{value:new THREE.Vector3(0,0,1)},col:{value:new THREE.Vector3(1,.97,.9)},op:{value:0},shine:{value:0}};
+const moonMesh=new THREE.Mesh(new THREE.PlaneGeometry(MOON_SIZE,MOON_SIZE),new THREE.ShaderMaterial({uniforms:moonU,transparent:true,depthWrite:false,
+  vertexShader:'varying vec2 vU;void main(){vU=uv*2.-1.;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+  fragmentShader:`uniform vec3 L,col;uniform float op,shine;varying vec2 vU;
+  float blob(vec2 p,vec2 c,float r){return 1.-smoothstep(r*.25,r,length(p-c));}
+  void main(){float rr=dot(vU,vU);if(rr>1.)discard;vec3 n=vec3(vU,sqrt(1.-rr));
+    float day=smoothstep(-.05,.08,dot(n,normalize(L)));                       // the lit side faces the real sun
+    float mare=blob(vU,vec2(-.3,.42),.3)*.8+blob(vU,vec2(-.56,.05),.42)*.6+blob(vU,vec2(-.38,-.22),.22)*.5+blob(vU,vec2(.22,.42),.18)*.9+blob(vU,vec2(.36,.12),.24)*.8+blob(vU,vec2(.7,.3),.12)*.9+blob(vU,vec2(.55,-.12),.15)*.6+blob(vU,vec2(-.12,-.38),.2)*.5;mare=min(mare,1.)*(.82+.18*sin(vU.x*7.+vU.y*5.)*sin(vU.y*9.-vU.x*3.));   // the dark seas as seen from the north: Imbrium, Procellarum, Serenitatis, Tranquillitatis, Crisium…
+    vec3 c=col*.9*(1.-.2*mare)*(.84+.16*n.z);
+    c*=1.+.1*(1.-smoothstep(0.,.05,length(vU-vec2(-.1,-.72))));   // Tycho, a bright fleck
+    float edge=1.-smoothstep(.94,1.,rr);
+    float a=max(day,shine)*edge*op;                                            // faint earthshine on the dark part at night
+    gl_FragColor=vec4(c*(day+shine*.35*(1.-day)),a);}`}));
+moonMesh.renderOrder=0;moonMesh.frustumCulled=false;scene.add(moonMesh);
+const haloT=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),g=x.createRadialGradient(64,64,0,64,64,64);
+  g.addColorStop(0,'rgba(255,250,235,.22)');g.addColorStop(.12,'rgba(255,248,230,.16)');g.addColorStop(.4,'rgba(230,235,245,.05)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,128,128);return new THREE.CanvasTexture(c)})();
+const moonHalo=new THREE.Sprite(new THREE.SpriteMaterial({map:haloT,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:0}));
+moonHalo.scale.setScalar(MOON_SIZE*9);moonHalo.renderOrder=0;scene.add(moonHalo);
+const skyDir=(alt,az,v)=>{const d=(az-90)*R,a=alt*R;return v.set(Math.sin(d)*Math.cos(a),Math.sin(a),-Math.cos(d)*Math.cos(a))};
+const mW=new THREE.Vector3(),sW=new THREE.Vector3(),lW=new THREE.Vector3(),qI=new THREE.Quaternion();let moonNow=null;
+function updateMoon(t,s){const m=moonNow=moon(t);skyDir(m.alt,m.az,mW);skyDir(s.alt,s.az,sW);
+  moonMesh.position.copy(cam.position).addScaledVector(mW,MOON_D);moonMesh.lookAt(cam.position);
+  lW.copy(sW).multiplyScalar(389).sub(mW).normalize();moonU.L.value.copy(lW.applyQuaternion(qI.copy(moonMesh.quaternion).invert()));
+  const up=clamp((m.alt+1)/1.6,0,1),night=clamp((-s.alt-2)/10,0,1),low=clamp(m.alt/10,0,1);
+  moonU.col.value.set(1,.84+.13*low,.68+.24*low);                                // warmer when it has just risen
+  moonU.op.value=up*(.45+.55*night);moonU.shine.value=night*clamp(1-m.lit*1.6,0,1)*.18;
+  moonHalo.position.copy(moonMesh.position);moonHalo.material.opacity=up*night*(.15+.85*m.lit)*.8;
+  U.moonDir.value.copy(mW);U.moonI.value=up*night*Math.pow(m.lit,1.3);
+  moonMesh.visible=moonHalo.visible=up>0}
 const sea=new THREE.Mesh(new THREE.PlaneGeometry(1000,1000),new THREE.ShaderMaterial({uniforms:U,
   vertexShader:'varying vec3 vW;void main(){vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}',
-  fragmentShader:`uniform vec3 hor,seaFar,seaNear,glowC,sunDir;uniform float glowI,time;varying vec3 vW;
+  fragmentShader:`uniform vec3 hor,seaFar,seaNear,glowC,sunDir,moonDir;uniform float glowI,time,moonI;varying vec3 vW;
   void main(){vec3 V=normalize(vW-cameraPosition);float dist=length(vW.xz-cameraPosition.xz);
   vec3 c=mix(seaNear,seaFar,smoothstep(8.,260.,dist));float t=time;
   vec3 n=normalize(vec3(sin(vW.x*.9+t*.8)*.07+sin(vW.z*1.7+t*1.1)*.05+sin(vW.x*3.1-t*2.)*.02,1.,cos(vW.z*.7-t*.6)*.07+sin(vW.x*1.3-t*1.2)*.05+cos(vW.z*2.9+t*1.7)*.02));
   vec3 r=reflect(V,n);float f=pow(1.-max(dot(-V,vec3(0.,1.,0.)),0.),3.);c=mix(c,hor*.85,f*.35);
   c+=glowC*pow(max(dot(r,sunDir),0.),70.)*glowI*1.4+glowC*pow(max(dot(r,sunDir),0.),8.)*glowI*.12;
+  c+=vec3(.86,.88,.93)*(pow(max(dot(r,moonDir),0.),160.)*.55+pow(max(dot(r,moonDir),0.),24.)*.03)*moonI;   // 달빛 길
   c=mix(c,seaFar,smoothstep(200.,480.,dist));gl_FragColor=vec4(c,1.);}`}));
 sea.rotation.x=-Math.PI/2;sea.position.y=-7;scene.add(sea);
+let envT=Date.now();
 function updateEnv(now,s){
   const p=pal(s.alt);v3(p.top,U.top.value);v3(p.hor,U.hor.value);v3(mix(p.hor,[16,28,40],.45),U.seaFar.value);v3(mix(p.top,[6,12,20],.6),U.seaNear.value);
   const d=(s.az-90)*R,a=Math.max(s.alt,-6)*R;U.sunDir.value.set(Math.sin(d)*Math.cos(a),Math.sin(a),-Math.cos(d)*Math.cos(a)).normalize();
   U.glowI.value=clamp((s.alt+15)/13,0,1)*clamp(1-(s.alt-4)/20,.15,1);U.sunVis.value=clamp((s.alt+1.2)/1.2,0,1);U.time.value=now/1000;
-  starM.opacity=clamp((-s.alt-7)/7,0,1)*.9;
+  updateMoon(envT,s);starM.opacity=clamp((-s.alt-7)/7,0,1)*.9*(1-.4*U.moonI.value);
   return p;
 }
 
@@ -1626,7 +1699,7 @@ function frame(now){
   const raw=now-lastRaw;lastRaw=now;measure(now,raw);
   if(now-last<31&&(QUALITY.lite||PERF.done&&!busy(now)))return;   // resting (or 가볍게 보기): about 30 frames a second
   const dt=Math.min(.1,(now-last)/1000);last=now;
-  const s=sun(sceneTime()),p=updateEnv(now,s),day=clamp((s.alt+12)/22,0,1);
+  envT=sceneTime();const s=sun(envT),p=updateEnv(now,s),day=clamp((s.alt+12)/22,0,1);
   hemi.color.setRGB(p.top[0]/255,p.top[1]/255,p.top[2]/255);hemi.intensity=.3+.55*day;
   sunL.intensity=clamp((s.alt+2)/10,0,1)*1.1;sunL.position.copy(U.sunDir.value).multiplyScalar(20);sunL.position.y=Math.max(1,sunL.position.y);sunL.color.setRGB(1,.82+.15*day,.62+.3*day);
   lamps.forEach(l=>l.intensity=1.2*(1-day*.8));
@@ -1798,6 +1871,9 @@ $('gbForm').onsubmit=async e=>{e.preventDefault();if(gbBusy)return;
     if(ray.intersectObject(teaCat.g,true).length){if(teaCat.nearMe()&&!teaCat.petting()&&me.mode==='walk')teaCat.pet();else teaCat.poke();return}
     if(ray.intersectObject(knotTree.board,false).length){signTip();return}
     if(way.count&&ray.intersectObject(way,false).length){$('treeGo').onclick();return}
+    if(moonMesh.visible&&moonNow&&ray.ray.direction.angleTo(mW)<3*R&&tipSay){const t=sceneTime(),n=lunarDay(t),mt=moonTimes(dayBase(t));
+      const b=dayBase(t);let rise=mt.rise,set=mt.set,sd='';if(rise&&(!set||set<rise)){set=moonTimes(b+864e5).set;sd='내일 '}
+      tipSay(`정동진 하늘의 달 · 음력 ${n}일 ${moonName(moonNow)}<small>${Math.round(moonNow.lit*100)}% 밝음${rise?` · 뜨는 시각 ${hm(rise)}`:''}${set?` · ${sd}지는 시각 ${hm(set)}`:''}</small>`,6000);return}
     const hit=ray.intersectObject(knotTree.strips,false)[0];if(!hit||hit.instanceId==null||!knots[hit.instanceId]){if(!tip.hidden){clearTimeout(tipTimer);tip.hidden=true}return}const k=knots[hit.instanceId];
     say(`${esc(k.message)}<small>${esc(k.name)} · ${whenText(k.at)}</small>`,5000)})}
 // how to keep the records: shown once, and from the guestbook any time
@@ -2089,7 +2165,7 @@ let sbOne=null;function sbClient(){if(sbOne)return sbOne;if(!window.supabase)ret
   try{sbOne=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},realtime:{params:{eventsPerSecond:10}}})}catch(e){sbOne=null}return sbOne}
 const SB_URL='https://tckghakjphopeqyuncyd.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja2doYWtqcGhvcGVxeXVuY3lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MTA3OTUsImV4cCI6MjEwOTE4Njc5NX0.Fb9voUGZXIXlXY2Q8uTDxCNjwJmRpsNr9lh7CxqPSSo',ROOM_NAME='borih-morning-jeongdongjin';
 const myKey=(()=>{let k=store.get('id');if(!k){k='v'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set('id',k)}return k+'-'+Math.random().toString(36).slice(2,6)})();
-const APP_V='109';
+const APP_V='110';
 $('ver').textContent='v'+APP_V;
 function connectRoom(){
   // Presence only says who is here (tracked once per connection). Everything else rides broadcasts:
